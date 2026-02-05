@@ -1,0 +1,10 @@
+integration:
+  defaults:
+    currency: '%env(default:EUR:INTEGRATION_DEFAULT_CURRENCY)%'
+    language: '%env(default:de-DE:INTEGRATION_DEFAULT_LANGUAGE)%'
+
+  adapters:
+    shopware:
+      base_url: '%env(resolve:SHOPWARE_BASE_URL)%'
+      client_id: '%env(resolve:SHOPWARE_CLIENT_ID)%'
+      client_secret: '%env(resolve:SHOPWARE_CLIENT_SECRET)%'
