@@ -24,5 +24,10 @@ final class IntegrationExtension extends Extension
         $container->setParameter('integration.defaults', $config['defaults']);
         $container->setParameter('integration.adapters', $config['adapters']);
         $container->setParameter('integration.adapters.shopware', $config['adapters']['shopware'] ?? []);
+
+        $shopware = $config['adapters']['shopware'] ?? [];
+
+        $container->setParameter('integration.adapters.shopware', $shopware);
+        $container->setParameter('integration.adapters.shopware.base_url', $shopware['base_url'] ?? null);
     }
 }
