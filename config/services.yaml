@@ -22,3 +22,11 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+
+    # App\Command\Integration\ShopwarePingCommand:
+    #     arguments:
+    #         $shopwareBaseUrl: '%integration.adapters.shopware.base_url%'
+
+    App\Integration\Infrastructure\Http\Shopware\ShopwareAdminApiClient:
+        arguments:
+            $baseUrl: '%integration.adapters.shopware.base_url%'
