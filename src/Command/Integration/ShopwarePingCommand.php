@@ -28,7 +28,7 @@ final class ShopwarePingCommand extends Command
         $this->printResult($output, 'health-check', $health['status'], $health['body']);
 
         // Optional: version endpoint; 401 is fine (reachable but auth required)
-        $version = $this->client->request('GET', '/api/_info/version');
+        $version = $this->client->request('GET', '/api/_info/version', [], [], [], true);
         $this->printResult($output, 'version', $version['status'], $version['body']);
 
         return Command::SUCCESS;
