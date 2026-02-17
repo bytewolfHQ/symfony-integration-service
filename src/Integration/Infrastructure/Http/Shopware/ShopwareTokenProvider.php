@@ -6,7 +6,7 @@ namespace App\Integration\Infrastructure\Http\Shopware;
 
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-final class ShopwareTokenProvider
+final class ShopwareTokenProvider implements ShopwareTokenProviderInterface
 {
     private ?string $token = null;
     private int $expiresAt = 0;
@@ -32,7 +32,7 @@ final class ShopwareTokenProvider
         $response = $this->httpClient->request('POST', $url, [
             'verify_peer' => $this->verifySsl,
             'verify_host' => $this->verifySsl,
-            'json' => [
+            'body' => [
                 'grant_type' => 'client_credentials',
                 'client_id' => $this->clientId,
                 'client_secret' => $this->clientSecret,
@@ -44,8 +44,7 @@ final class ShopwareTokenProvider
 
         if ($status < 200 || $status >= 300) {
             $snippet = trim(mb_substr($body, 0, 300));
-            throw new \RuntimeException("Shopware token request
-            failed ($status): $snippet");
+            throw new \RuntimeException("Shopware token request failed ($status): $snippet");
         }
 
         $data = json_decode($body, true);

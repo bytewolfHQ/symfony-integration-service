@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Shopware\Psh\Integration\Infrastructure\Http\Shopware;
+namespace App\Integration\Infrastructure\Http\Shopware;
 
 use RuntimeException;
 
