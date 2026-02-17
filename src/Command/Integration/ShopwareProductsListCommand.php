@@ -57,8 +57,9 @@ final class ShopwareProductsListCommand extends Command
             return Command::FAILURE;
         }
 
-        $total = $data['total'] ?? null;
-        $output->writeln(sprintf('total: %s', is_int($total) ? (string) $total : 'n/a'));
+        $total = $data['total'] ?? ($data['meta']['total'] ?? null);
+        $totalText = is_numeric($total) ? (string) (int) $total : 'n/a';
+        $output->writeln(sprintf('total: %s', $totalText));
         $output->writeln(sprintf('limit: %d, page: %d', $limit, $page));
 
         $items = $data['data'] ?? [];
