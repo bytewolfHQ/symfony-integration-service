@@ -13,6 +13,7 @@ final class ShopwareAdminApiClient
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly LoggerInterface $logger,
+        private readonly ShopwareTokenProvider $tokenProvider,
         private readonly string $baseUrl,
         private readonly bool $verifySsl = true, // stays true; you fixed CA trust
     ) {
@@ -32,6 +33,7 @@ final class ShopwareAdminApiClient
         array $json = [],
         array $query = [],
         array $headers = [],
+        bool $authenticated = false,
     ): array
     {
         $url = $this->buildUrl($path);
@@ -40,10 +42,6 @@ final class ShopwareAdminApiClient
             'verify_peer' => $this->verifySsl,
             'verify_host' => $this->verifySsl,
         ];
-
-        if ($headers !== []) {
-            $options['headers'] = $headers;
-        }
 
         if ($query !== []) {
             $options['query'] = $query;
@@ -59,6 +57,15 @@ final class ShopwareAdminApiClient
             'method' => $method,
             'path' => $path,
         ]);
+
+        if ($authenticated) {
+            $token = $this->tokenProvider->getAccessToken();
+            $headers['Authorization'] = 'Bearer ' . $token;
+        }
+
+        if ($headers !== []) {
+            $options['headers'] = $headers;
+        }
 
         $response = $this->httpClient->request($method, $url, $options);
 
@@ -99,9 +106,9 @@ final class ShopwareAdminApiClient
      *
      * @return array{status:int, body:string}
      */
-    public function get(string $path, array $query = [], array $headers = []): array
+    public function get(string $path, array $query = [], array $headers = [], bool $authenticated = false): array
     {
-        return $this->request('GET', $path, [], $query, $headers);
+        return $this->request('GET', $path, [], $query, $headers, $authenticated);
     }
 
     private function buildUrl(string $path): string
