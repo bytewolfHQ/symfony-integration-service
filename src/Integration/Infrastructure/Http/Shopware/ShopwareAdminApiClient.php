@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Integration\Infrastructure\Http\Shopware;
 
 use Psr\Log\LoggerInterface;
-use Shopware\Psh\Integration\Infrastructure\Http\Shopware\ShopwareApiException;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class ShopwareAdminApiClient
@@ -13,7 +12,7 @@ final class ShopwareAdminApiClient
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly LoggerInterface $logger,
-        private readonly ShopwareTokenProvider $tokenProvider,
+        private readonly ShopwareTokenProviderInterface $tokenProvider,
         private readonly string $baseUrl,
         private readonly bool $verifySsl = true, // stays true; you fixed CA trust
     ) {

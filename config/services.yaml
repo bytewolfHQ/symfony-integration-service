@@ -36,3 +36,5 @@ services:
             $baseUrl: '%integration.adapters.shopware.base_url%'
             $clientId: '%env(resolve:SHOPWARE_CLIENT_ID)%'
             $clientSecret: '%env(resolve:SHOPWARE_CLIENT_SECRET)%'
+
+    App\Integration\Infrastructure\Http\Shopware\ShopwareTokenProviderInterface: '@App\Integration\Infrastructure\Http\Shopware\ShopwareTokenProvider'
