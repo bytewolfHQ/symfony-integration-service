@@ -32,6 +32,11 @@ jobs:
       - name: Warm up Symfony cache (for PHPStan)
         run: php bin/console cache:warmup
 
+      - name: Detect Symfony container xml
+        run: |
+          echo "Container XML in var/cache/test:"
+          ls -la var/cache/test | grep Container || true
+
       - name: Run PHPUnit
         run: php vendor/bin/phpunit
 
