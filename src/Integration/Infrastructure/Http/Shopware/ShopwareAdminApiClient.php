@@ -89,9 +89,10 @@ final class ShopwareAdminApiClient
         array $json = [],
         array $query = [],
         array $headers = [],
+        bool $authenticated = false,
     ): array
     {
-        $res = $this->request($method, $path, $json, $query, $headers);
+        $res = $this->request($method, $path, $json, $query, $headers, $authenticated);
         
         if ($res['status'] >= 200 && $res['status'] < 300) {
             return $res;
