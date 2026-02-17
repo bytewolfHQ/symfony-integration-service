@@ -20,7 +20,14 @@ jobs:
           coverage: none
 
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
+        run: composer install --no-interaction --prefer-dist --no-scripts
+
+      - name: Prepare env for CI
+        run: |
+          if [ ! -f .env ]; then cp .env.example .env; fi
+          echo "APP_ENV=test" >> .env
+          echo "APP_DEBUG=0" >> .env
+          echo "APP_SECRET=ci_dummy_secret_please_change" >> .env
 
       - name: Warm up Symfony cache (for PHPStan)
         run: php bin/console cache:warmup
