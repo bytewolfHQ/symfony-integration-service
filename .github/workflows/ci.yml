@@ -29,8 +29,11 @@ jobs:
           echo "APP_DEBUG=0" >> .env
           echo "APP_SECRET=ci_dummy_secret_please_change" >> .env
 
-      - name: Warm up Symfony cache (for PHPStan)
-        run: php bin/console cache:warmup
+      - name: Warm up Symfony cache (for PHPStan, dev+debug)
+        run: php bin/console cache:warmup --env=dev
+        env:
+          APP_ENV: dev
+          APP_DEBUG: 1
 
       - name: Detect Symfony container xml
         run: |
@@ -41,4 +44,7 @@ jobs:
         run: php vendor/bin/phpunit
 
       - name: Run PHPStan
-        run: php vendor/bin/phpstan analyse
+        run: php vendor/bin/phpstan analyse -c phpstan.dist.neon
+        env:
+          APP_ENV: dev
+          APP_DEBUG: 1

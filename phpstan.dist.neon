@@ -9,7 +9,7 @@ parameters:
 
   # Symfony-spezifisch
   symfony:
-    containerXmlPath: var/cache/test/App_KernelTestDebugContainer.xml
+    containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
 
   # Für den Anfang nicht zu streng
   treatPhpDocTypesAsCertain: false
