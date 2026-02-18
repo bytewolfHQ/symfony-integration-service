@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-scripts
+
+      - name: Prepare env for CI
+        run: |
+          if [ ! -f .env ]; then cp .env.example .env; fi
+          echo "APP_ENV=test" >> .env
+          echo "APP_DEBUG=0" >> .env
+          echo "APP_SECRET=ci_dummy_secret_please_change" >> .env
+
+      - name: Warm up Symfony cache (for PHPStan)
+        run: php bin/console cache:warmup --env=dev
+        env:
+          APP_ENV: dev
+          APP_DEBUG: 1
+
+      - name: Run PHPUnit
+        run: php vendor/bin/phpunit
+        env:
+          APP_ENV: test
+          APP_DEBUG: 0
+
+      - name: Run PHPStan
+        run: php vendor/bin/phpstan analyse -c phpstan.dist.neon
+        env:
+          APP_ENV: dev
+          APP_DEBUG: 1

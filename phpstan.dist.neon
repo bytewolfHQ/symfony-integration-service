@@ -1,0 +1,15 @@
+includes:
+  - vendor/phpstan/phpstan-symfony/extension.neon
+
+parameters:
+  level: 3
+  paths:
+    - src
+    - tests
+
+  # Symfony-spezifisch
+  symfony:
+    containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
+
+  # Für den Anfang nicht zu streng
+  treatPhpDocTypesAsCertain: false
