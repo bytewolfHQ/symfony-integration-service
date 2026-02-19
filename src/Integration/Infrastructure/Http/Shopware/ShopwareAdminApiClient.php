@@ -76,9 +76,20 @@ final class ShopwareAdminApiClient
             'status' => $status,
         ]);
 
+        $raw = $response->getContent(false);
+
+        $decoded = null;
+        if (is_string($raw) && $raw !== '') {
+            $tmp = json_decode($raw, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($tmp)) {
+                $decoded = $tmp;
+            }
+        }
+
         return [
             'status' => $status,
-            'body' => $response->getContent(false),  // do not throw on 4xx/5xx
+            'raw' => $raw,
+            'body' => $decoded ?? ['raw' => $raw],
         ];
     }
 
