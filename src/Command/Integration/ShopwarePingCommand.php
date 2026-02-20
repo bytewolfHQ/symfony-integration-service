@@ -53,8 +53,14 @@ final class ShopwarePingCommand extends Command
         }
     }
 
-    private function snippet(string $text, int $max = 250): string
+    private function snippet(mixed $text, int $max = 250): string
     {
+        if (is_array($text)) {
+            $text = json_encode($text, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '';
+        } elseif (!is_string($text)) {
+            $text = (string) $text;
+        }
+
         $t = trim($text);
         if ($t === '') {
             return '';
