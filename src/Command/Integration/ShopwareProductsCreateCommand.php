@@ -99,8 +99,10 @@ final class ShopwareProductsCreateCommand extends Command
             authenticated: true
         );
 
-        $data = json_decode($res['body'], true);
-        $id = $data['data'][0]['id'] ?? null;
+        //$data = json_decode($res['body'], true);
+        //$id = $data['data'][0]['id'] ?? null;
+
+        $id = $res['body']['data'][0]['id'] ?? null;
 
         if (!is_string($id) || $id === '') {
             throw new \RuntimeException("Could not resolve currencyId for isoCode=$iso");
@@ -130,8 +132,10 @@ final class ShopwareProductsCreateCommand extends Command
             authenticated: true
         );
 
-        $data = json_decode($res['body'], true);
-        $id = $data['data'][0]['id'] ?? null;
+        //$data = json_decode($res['body'], true);
+        //$id = $data['data'][0]['id'] ?? null;
+
+        $id = $res['body']['data'][0]['id'] ?? null;
 
         if (!is_string($id) || $id === '') {
             throw new \RuntimeException("Could not resolve taxId for taxRate=$rate");

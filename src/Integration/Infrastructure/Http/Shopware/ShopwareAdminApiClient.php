@@ -19,12 +19,18 @@ final class ShopwareAdminApiClient
     }
 
     /**
-     * Genral request entry point (M0.3)
-     *
-     * @param array<string, mixed> $json
-     * @param array<string, scalar> $query
-     * @param array<string, string> $headers
-     * @return array{status:int, body:string}
+     * Request against Shopware API endpoint
+     * @param string $method
+     * @param string $path
+     * @param array $json
+     * @param array $query
+     * @param array $headers
+     * @param bool $authenticated
+     * @return array
+     * @throws \Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface
+     * @throws \Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface
+     * @throws \Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface
+     * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
      */
     public function request(
         string $method,
@@ -76,9 +82,20 @@ final class ShopwareAdminApiClient
             'status' => $status,
         ]);
 
+        $raw = $response->getContent(false);
+
+        $decoded = null;
+        if (is_string($raw) && $raw !== '') {
+            $tmp = json_decode($raw, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($tmp)) {
+                $decoded = $tmp;
+            }
+        }
+
         return [
             'status' => $status,
-            'body' => $response->getContent(false),  // do not throw on 4xx/5xx
+            'raw' => $raw,
+            'body' => $decoded ?? ['raw' => $raw],
         ];
     }
 
@@ -116,8 +133,14 @@ final class ShopwareAdminApiClient
         return rtrim($this->baseUrl, '/') . '/' . ltrim($path, '/');
     }
 
-    private function snippet(string $text, int $max = 300): string
+    private function snippet(mixed $text, int $max = 300): string
     {
+        if (is_array($text)) {
+            $text = json_encode($text, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '';
+        } elseif (!is_string($text)) {
+            $text = (string) $text;
+        }
+
         $t = trim($text);
         if ($t === '') {
             return '';

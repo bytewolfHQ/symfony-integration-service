@@ -51,12 +51,7 @@ final class ShopwareProductsListCommand extends Command
             true
         );
 
-        $data = json_decode($res['body'], true);
-        if (!is_array($data)) {
-            $output->writeln('<error>Invalid JSON response</error>');
-            return Command::FAILURE;
-        }
-
+        $data = $res['body'];
         $total = $data['total'] ?? ($data['meta']['total'] ?? null);
         $totalText = is_numeric($total) ? (string) (int) $total : 'n/a';
         $output->writeln(sprintf('total: %s', $totalText));
