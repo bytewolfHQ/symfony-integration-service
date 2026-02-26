@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Command\Integration;
 
 use App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvReader;
-use App\Integration\Infrastructure\Shopware\Product\ShopwareProductImportService;
+use App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvImportRunner;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -20,7 +20,7 @@ final class ShopwareProductsImportCsvCommand extends Command
 {
     public function __construct(
         private readonly ProductCsvReader $csvReader,
-        private readonly ShopwareProductImportService $importService,
+        private readonly ProductCsvImportRunner $runner,
     ) {
         parent::__construct();
     }
@@ -65,40 +65,26 @@ final class ShopwareProductsImportCsvCommand extends Command
             return Command::SUCCESS;
         }
 
-        $created = 0;
-        $updated = 0;
-        $failed = 0;
-
-        foreach ($drafts as $draft) {
-            try {
-                $action = $this->importService->upsert($draft, $dryRun);
-
-                match ($action) {
-                    'create' => $created++,
-                    'update' => $updated++,
-                    default => null,
-                };
-
-                $output->writeln(sprintf('%s: %s | %s', $action, $draft->productNumber, $draft->name));
-            } catch (\Throwable $e) {
-                $failed++;
-                $output->writeln(sprintf(
-                    '<error>error: %s | %s (%s)</error>',
-                    $draft->productNumber,
-                    $draft->name,
-                    $e->getMessage()
-                ));
-            }
-        }
+        $summary = $this->runner->importDrafts($drafts, $dryRun);
 
         $output->writeln(sprintf(
-            '<info>Summary: created=%d, updated=%d, failed=%d%s</info>',
-            $created,
-            $updated,
-            $failed,
+            'Importing %d products from CSV%s',
+            $summary['total'],
             $dryRun ? ' (dry-run)' : ''
         ));
 
-        return $failed > 0 ? Command::FAILURE : Command::SUCCESS;
+        foreach ($summary['results'] as $r) {
+            $output->writeln(sprintf('%s: %s | %s', $r['action'], $r['productNumber'], $r['name']));
+        }
+
+        $output->writeln(sprintf(
+            'Summary: created=%d, updated=%d, failed=%d%s',
+            $summary['created'],
+            $summary['updated'],
+            $summary['failed'],
+            $dryRun ? ' (dry-run)' : ''
+        ));
+
+        return $summary['failed'] > 0 ? Command::FAILURE : Command::SUCCESS;
     }
 }

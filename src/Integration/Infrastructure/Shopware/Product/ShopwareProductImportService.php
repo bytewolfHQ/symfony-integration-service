@@ -7,7 +7,7 @@ namespace App\Integration\Infrastructure\Shopware\Product;
 use App\Integration\Infrastructure\Http\Shopware\ShopwareAdminApiClient;
 use App\Integration\Infrastructure\Shopware\ReferenceData\ShopwareReferenceDataResolver;
 
-final class ShopwareProductImportService
+final class ShopwareProductImportService implements ShopwareProductImporterInterface
 {
     public function __construct(
         private ShopwareAdminApiClient $client,

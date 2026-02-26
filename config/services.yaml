@@ -38,3 +38,4 @@ services:
             $clientSecret: '%env(resolve:SHOPWARE_CLIENT_SECRET)%'
 
     App\Integration\Infrastructure\Http\Shopware\ShopwareTokenProviderInterface: '@App\Integration\Infrastructure\Http\Shopware\ShopwareTokenProvider'
+    App\Integration\Infrastructure\Shopware\Product\ShopwareProductImporterInterface: '@App\Integration\Infrastructure\Shopware\Product\ShopwareProductImportService'
