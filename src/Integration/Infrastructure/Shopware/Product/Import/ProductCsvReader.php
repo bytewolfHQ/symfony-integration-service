@@ -17,7 +17,7 @@ final class ProductCsvReader
     public function read(string $file, string $delimiter = ',', ?int $limit = null): array
     {
         if (!is_file($file)) {
-            throw new \InvalidArgumentException(sprintf('CSF file not found: %s', $file));
+            throw new \InvalidArgumentException(sprintf('CSV file not found: %s', $file));
         }
 
         $fh = new \SplFileObject($file, 'r');
