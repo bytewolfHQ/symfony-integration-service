@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Integration\Infrastructure\Shopware\Product\Import;
 
-use App\Integration\Infrastructure\Shopware\Product\ShopwareProductImportService;
+use App\Integration\Infrastructure\Shopware\Product\ShopwareProductImporterInterface;
 
 final class ProductCsvImportRunner
 {
     public function __construct(
-        private readonly ShopwareProductImportService $importService,
+        private readonly ShopwareProductImporterInterface $importService,
     ) {}
 
     /**
