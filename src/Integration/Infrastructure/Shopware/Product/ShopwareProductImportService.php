@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Integration\Infrastructure\Shopware\Product;
 
-use App\Integration\Infrastructure\Http\Shopware\ShopwareAdminApiClient;
-use App\Integration\Infrastructure\Shopware\ReferenceData\ShopwareReferenceDataResolver;
+use App\Integration\Infrastructure\Http\Shopware\ShopwareAdminApiClientInterface;
+use App\Integration\Infrastructure\Shopware\ReferenceData\ShopwareReferenceDataResolverInterface;
 
 final class ShopwareProductImportService implements ShopwareProductImporterInterface
 {
@@ -14,8 +14,8 @@ final class ShopwareProductImportService implements ShopwareProductImporterInter
     private const DEFAULT_TAX_RATE = 19;
 
     public function __construct(
-        private ShopwareAdminApiClient $client,
-        private ShopwareReferenceDataResolver $resolver,
+        private ShopwareAdminApiClientInterface $client,
+        private ShopwareReferenceDataResolverInterface $resolver,
     ) {}
 
     /**

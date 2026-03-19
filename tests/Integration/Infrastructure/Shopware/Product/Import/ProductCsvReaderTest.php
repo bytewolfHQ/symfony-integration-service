@@ -41,4 +41,76 @@ final class ProductCsvReaderTest extends TestCase
 
         @unlink($tmp);
     }
+
+    public function test_reads_extended_fields_from_csv(): void
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'csv_');
+        self::assertNotFalse($tmp);
+
+        file_put_contents($tmp, implode("\n", [
+            'productNumber,name,stock,gross,net,taxRate,currency,active',
+            'IMP-201,Product 201,10,19.99,16.80,19,EUR,true',
+            'IMP-202,Product 202,0,29.99,25.20,19,EUR,false',
+        ]));
+
+        $reader = new ProductCsvReader();
+        $drafts = $reader->read($tmp);
+
+        self::assertCount(2, $drafts);
+
+        self::assertSame(10, $drafts[0]->stock);
+        self::assertSame(19.99, $drafts[0]->gross);
+        self::assertSame(16.80, $drafts[0]->net);
+        self::assertSame(19.0, $drafts[0]->taxRate);
+        self::assertSame('EUR', $drafts[0]->currency);
+        self::assertTrue($drafts[0]->active);
+
+        self::assertFalse($drafts[1]->active);
+        self::assertSame(0, $drafts[1]->stock);
+
+        @unlink($tmp);
+    }
+
+    public function test_optional_fields_default_to_null(): void
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'csv_');
+        self::assertNotFalse($tmp);
+
+        // taxRate, currency and active are empty
+        file_put_contents($tmp, implode("\n", [
+            'productNumber,name,stock,gross,net,taxRate,currency,active',
+            'IMP-301,Product 301,5,9.99,,,, ',
+        ]));
+
+        $reader = new ProductCsvReader();
+        $drafts = $reader->read($tmp);
+
+        self::assertCount(1, $drafts);
+        self::assertNull($drafts[0]->taxRate);
+        self::assertNull($drafts[0]->currency);
+        self::assertNull($drafts[0]->active);
+
+        @unlink($tmp);
+    }
+
+    public function test_invalid_values_become_null(): void
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'csv_');
+        self::assertNotFalse($tmp);
+
+        file_put_contents($tmp, implode("\n", [
+            'productNumber,name,stock,gross,net,taxRate,currency,active',
+            'IMP-401,Product 401,notanumber,alsonotanumber,,,,maybe',
+        ]));
+
+        $reader = new ProductCsvReader();
+        $drafts = $reader->read($tmp);
+
+        self::assertCount(1, $drafts);
+        self::assertNull($drafts[0]->stock);   // "notanumber" → null
+        self::assertNull($drafts[0]->gross);   // "alsonotanumber" → null
+        self::assertNull($drafts[0]->active);  // "maybe" → null (not in bool map)
+
+        @unlink($tmp);
+    }
 }

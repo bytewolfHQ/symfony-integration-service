@@ -6,7 +6,7 @@ namespace App\Integration\Infrastructure\Shopware\ReferenceData;
 
 use App\Integration\Infrastructure\Http\Shopware\ShopwareAdminApiClient;
 
-final class ShopwareReferenceDataResolver
+final class ShopwareReferenceDataResolver implements ShopwareReferenceDataResolverInterface
 {
     // Cache keyed by iso code, e.g. ['EUR' => 'uuid...']
     private array $currencyIds = [];

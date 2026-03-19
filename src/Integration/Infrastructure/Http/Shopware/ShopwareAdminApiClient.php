@@ -7,7 +7,7 @@ namespace App\Integration\Infrastructure\Http\Shopware;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-final class ShopwareAdminApiClient
+final class ShopwareAdminApiClient implements ShopwareAdminApiClientInterface
 {
     public function __construct(
         private readonly HttpClientInterface $httpClient,
