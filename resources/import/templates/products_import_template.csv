@@ -1,6 +1,7 @@
 productNumber,name,stock,gross,net,taxRate,currency,active
 IMP-101,Imported product 101,10,19.99,16.80,19,EUR,true
 IMP-102,Imported product 102,0,29.99,25.20,19,EUR,false
-IMP-103,Imported product 103,5,9.99,8.39,,,true
-IMP-104,Imported product 104,25,49.90,41.93,19,,
-IMP-105,Imported product 105,,,12.61,19,EUR,true
+IMP-103,Imported product 103,5,9.99,,,,true
+IMP-104,Imported product 104,25,49.90,,19,,
+IMP-105,Imported product 105,8,24.99,,19,EUR,true
+IMP-106,Imported product 106,15,15.99,,7,EUR,true
