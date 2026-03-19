@@ -38,20 +38,36 @@ final class ProductCsvReader
             }
 
             if ($header === null) {
-                $header = array_map(static fn($v) => is_string($v) ? trim($v) : '', $row);
+                $header = array_map(static fn ($v) => is_string($v) ? trim($v) : '', $row);
                 continue;
             }
-            
+
             $assoc = $this->combine($header, $row);
 
-            $productNumber = trim($assoc['productNumber'] ?? '');
-            $name = trim((string)$assoc['name'] ?? '');
+            $productNumber = trim((string) ($assoc['productNumber'] ?? ''));
+            $name = trim((string) ($assoc['name'] ?? ''));
 
             if ($productNumber === '' || $name === '') {
                 continue;
             }
 
-            $drafts[] = new ProductDraft($productNumber, $name);
+            $stock = $this->parseInt($assoc['stock'] ?? null);
+            $gross = $this->parseFloat($assoc['gross'] ?? null);
+            $net = $this->parseFloat($assoc['net'] ?? null);
+            $taxRate = $this->parseFloat($assoc['taxRate'] ?? null);
+            $currency = $this->parseString($assoc['currency'] ?? null);
+            $active = $this->parseBool($assoc['active'] ?? null);
+
+            $drafts[] = new ProductDraft(
+                $productNumber,
+                $name,
+                $stock,
+                $gross,
+                $net,
+                $taxRate,
+                $currency,
+                $active,
+            );
 
             if ($limit !== null && count($drafts) >= $limit) {
                 break;
@@ -69,12 +85,75 @@ final class ProductCsvReader
     private function combine(array $header, array $row): array
     {
         $assoc = [];
+
         foreach ($header as $i => $key) {
             if ($key === '') {
                 continue;
             }
+
             $assoc[$key] = $row[$i] ?? null;
         }
+
         return $assoc;
+    }
+
+    private function parseString(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
+    }
+
+    private function parseInt(mixed $value): ?int
+    {
+        $value = $this->parseString($value);
+
+        if ($value === null) {
+            return null;
+        }
+
+        if (!preg_match('/^-?\d+$/', $value)) {
+            return null;
+        }
+
+        return (int) $value;
+    }
+
+    private function parseFloat(mixed $value): ?float
+    {
+        $value = $this->parseString($value);
+
+        if ($value === null) {
+            return null;
+        }
+
+        $normalized = str_replace(',', '.', $value);
+
+        if (!is_numeric($normalized)) {
+            return null;
+        }
+
+        return (float) $normalized;
+    }
+
+    private function parseBool(mixed $value): ?bool
+    {
+        $value = $this->parseString($value);
+
+        if ($value === null) {
+            return null;
+        }
+
+        $normalized = strtolower($value);
+
+        return match ($normalized) {
+            '1', 'true', 'yes', 'y' => true,
+            '0', 'false', 'no', 'n' => false,
+            default => null,
+        };
     }
 }
