@@ -6,23 +6,26 @@ namespace App\Integration\Infrastructure\Shopware\ReferenceData;
 
 use App\Integration\Infrastructure\Http\Shopware\ShopwareAdminApiClient;
 
-final class ShopwareReferenceDataResolver
+final class ShopwareReferenceDataResolver implements ShopwareReferenceDataResolverInterface
 {
-    private ?string $currencyId = null;
-    private ?string $taxId = null;
+    // Cache keyed by iso code, e.g. ['EUR' => 'uuid...']
+    private array $currencyIds = [];
+
+    // Cache keyed by tax rate, e.g. [19 => 'uuid...', 7 => 'uuid...']
+    private array $taxIds = [];
 
     public function __construct(
         private readonly ShopwareAdminApiClient $client,
     ) {}
 
-    public function getCurrencyId(?string $currency = null): ?string
+    public function getCurrencyId(?string $currency = null): string
     {
-        if ($this->currencyId !== null) {
-            return $this->currencyId;
-        }
+        // Fall back to EUR if no currency given
+        $isoCode = $currency ?? 'EUR';
 
-        if ($currency === null) {
-            $currency = 'EUR';
+        // Return from cache if already resolved
+        if (isset($this->currencyIds[$isoCode])) {
+            return $this->currencyIds[$isoCode];
         }
 
         $res = $this->client->requestOrFail(
@@ -31,9 +34,9 @@ final class ShopwareReferenceDataResolver
             json: [
                 'limit' => 1,
                 'filter' => [[
-                    'type' => 'equals',
+                    'type'  => 'equals',
                     'field' => 'isoCode',
-                    'value' => $currency,
+                    'value' => $isoCode,
                 ]],
                 'includes' => ['currency' => ['id', 'isoCode']],
             ],
@@ -42,16 +45,17 @@ final class ShopwareReferenceDataResolver
 
         $id = $res['body']['data'][0]['id'] ?? null;
         if (!is_string($id) || $id === '') {
-            throw new \RuntimeException('Could not resolve currencyId for EUR.');
+            throw new \RuntimeException(sprintf('Could not resolve currencyId for "%s".', $isoCode));
         }
 
-        return $this->currencyId = $id;
+        return $this->currencyIds[$isoCode] = $id;
     }
 
-    public function getTaxId(int $taxId = 19): ?string
+    public function getTaxId(int $taxRate = 19): string
     {
-        if ($this->taxId !== null) {
-            return $this->taxId;
+        // Return from cache if already resolved
+        if (isset($this->taxIds[$taxRate])) {
+            return $this->taxIds[$taxRate];
         }
 
         $res = $this->client->requestOrFail(
@@ -60,9 +64,9 @@ final class ShopwareReferenceDataResolver
             json: [
                 'limit' => 1,
                 'filter' => [[
-                    'type' => 'equals',
+                    'type'  => 'equals',
                     'field' => 'taxRate',
-                    'value' => $taxId,
+                    'value' => $taxRate,
                 ]],
                 'includes' => ['tax' => ['id', 'taxRate']],
             ],
@@ -71,9 +75,9 @@ final class ShopwareReferenceDataResolver
 
         $id = $res['body']['data'][0]['id'] ?? null;
         if (!is_string($id) || $id === '') {
-            throw new \RuntimeException('Could not resolve taxId for taxRate=19.');
+            throw new \RuntimeException(sprintf('Could not resolve taxId for taxRate=%d.', $taxRate));
         }
 
-        return $this->taxId = $id;
+        return $this->taxIds[$taxRate] = $id;
     }
 }
