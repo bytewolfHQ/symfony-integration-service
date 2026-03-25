@@ -10,6 +10,7 @@ final class ProductCsvImportRunner
 {
     public function __construct(
         private readonly ShopwareProductImporterInterface $importService,
+        private readonly ProductDraftValidatorInterface $validator,
     ) {}
 
     /**
@@ -30,29 +31,45 @@ final class ProductCsvImportRunner
         $failed = 0;
         $results = [];
 
+        $rowNumber = 2; // row 1 is the header, already consumed by the reader
         foreach ($drafts as $draft) {
-            try {
-                $action = $this->importService->upsert($draft, $dryRun);
+            $errors = $this->validator->validate($draft, $rowNumber);
 
-                match ($action) {
-                    'create' => $created++,
-                    'update' => $updated++,
-                    default  => null,
-                };
+            if (count($errors) === 0) {
+                try {
+                    $action = $this->importService->upsert($draft, $dryRun);
 
-                $results[] = [
-                    'productNumber' => $draft->productNumber,
-                    'name' => $draft->name,
-                    'action' => $action,
-                ];
-            } catch (\Throwable $e) {
+                    match ($action) {
+                        'create' => $created++,
+                        'update' => $updated++,
+                        default => null,
+                    };
+
+                    $results[] = [
+                        'productNumber' => $draft->productNumber,
+                        'name' => $draft->name,
+                        'action' => $action,
+                    ];
+                } catch (\Throwable $e) {
+                    $failed++;
+                    $results[] = [
+                        'productNumber' => $draft->productNumber,
+                        'name' => $draft->name,
+                        'action' => 'error: ' . $e->getMessage(),
+                    ];
+                }
+            } else {
                 $failed++;
-                $results[] = [
-                    'productNumber' => $draft->productNumber,
-                    'name' => $draft->name,
-                    'action' => 'error: ' . $e->getMessage(),
-                ];
+                foreach ($errors as $error) {
+                    $results[] = [
+                        'productNumber' => $draft->productNumber,
+                        'name'          => $draft->name,
+                        'action'        => 'validation: ' . $error->field . ' – ' . $error->reason,
+                    ];
+                }
             }
+
+            $rowNumber++;
         }
 
         return [
