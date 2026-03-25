@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Integration\Infrastructure\Shopware\Product\Import;
 
 use App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvImportRunner;
+use App\Integration\Infrastructure\Shopware\Product\Import\ProductDraftValidator;
+use App\Integration\Infrastructure\Shopware\Product\Import\ProductDraftValidatorInterface;
+use App\Integration\Infrastructure\Shopware\Product\Import\ValidationError;
 use App\Integration\Infrastructure\Shopware\Product\ProductDraft;
 use App\Integration\Infrastructure\Shopware\Product\ShopwareProductImporterInterface;
 use PHPUnit\Framework\TestCase;
@@ -20,7 +23,7 @@ final class ProductCsvImportRunnerTest extends TestCase
             ->method('upsert')
             ->willReturnOnConsecutiveCalls('create', 'update');
 
-        $runner = new ProductCsvImportRunner($service);
+        $runner = new ProductCsvImportRunner($service, new ProductDraftValidator());
 
         $drafts = [
             new ProductDraft('IMP-401', 'Imported product 401'),
@@ -59,7 +62,7 @@ final class ProductCsvImportRunnerTest extends TestCase
                 }
             );
 
-        $runner = new ProductCsvImportRunner($service);
+        $runner = new ProductCsvImportRunner($service, new ProductDraftValidator());
 
         $drafts = [
             new ProductDraft('IMP-501', 'Imported product 501'),
@@ -76,5 +79,52 @@ final class ProductCsvImportRunnerTest extends TestCase
 
         self::assertStringStartsWith('error:', $summary['results'][0]['action']);
         self::assertSame('create', $summary['results'][1]['action']);
+    }
+
+    public function test_validation_errors_are_counted_as_failed(): void
+    {
+        $service = $this->createStub(ShopwareProductImporterInterface::class);
+        $validator = $this->createStub(ProductDraftValidatorInterface::class);
+
+        // First draft fails validation, second passes
+        $validator
+            ->method('validate')
+            ->willReturnOnConsecutiveCalls(
+                [new ValidationError(2, 'IMP-601', 'gross', 'required when net is provided')],
+                [],
+            );
+
+        $service->method('upsert')->willReturn('create');
+
+        $runner = new ProductCsvImportRunner($service, $validator);
+
+        $drafts = [
+            new ProductDraft('IMP-601', 'Product 601', null, null, 8.39),
+            new ProductDraft('IMP-602', 'Product 602', 5, 9.99),
+        ];
+
+        $summary = $runner->importDrafts($drafts);
+
+        self::assertSame(2, $summary['total']);
+        self::assertSame(1, $summary['created']);
+        self::assertSame(0, $summary['updated']);
+        self::assertSame(1, $summary['failed']);
+    }
+
+    public function test_validation_error_appears_in_results(): void
+    {
+        $service = $this->createStub(ShopwareProductImporterInterface::class);
+        $validator = $this->createStub(ProductDraftValidatorInterface::class);
+
+        $validator
+            ->method('validate')
+            ->willReturn([new ValidationError(2, 'IMP-701', 'gross', 'required when net is provided')]);
+
+        $runner = new ProductCsvImportRunner($service, $validator);
+
+        $drafts = [new ProductDraft('IMP-701', 'Product 701', null, null, 8.39)];
+        $summary = $runner->importDrafts($drafts);
+
+        self::assertStringStartsWith('validation:', $summary['results'][0]['action']);
     }
 }

@@ -5,3 +5,6 @@ IMP-103,Imported product 103,5,9.99,,,,true
 IMP-104,Imported product 104,25,49.90,,19,,
 IMP-105,Imported product 105,8,24.99,,19,EUR,true
 IMP-106,Imported product 106,15,15.99,,7,EUR,true
+IMP-107,Imported product 107,-5,19.99,,19,EUR,true
+IMP-108,Imported product 108,,8.39,19,EUR,true
+IMP-109,Imported product 109,10,19.99,,-3,EUR,true
