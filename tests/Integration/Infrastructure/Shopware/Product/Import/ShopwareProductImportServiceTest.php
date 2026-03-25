@@ -9,21 +9,21 @@ use App\Integration\Infrastructure\Shopware\Product\ProductDraft;
 use App\Integration\Infrastructure\Shopware\Product\ShopwareProductImportService;
 use App\Integration\Infrastructure\Shopware\ReferenceData\ShopwareReferenceDataResolverInterface;
 use PHPUnit\Framework\TestCase;
-use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 
 final class ShopwareProductImportServiceTest extends TestCase
 {
     private const CURRENCY_ID = 'currency-uuid-eur';
     private const TAX_ID = 'tax-uuid-19';
 
-    private ShopwareAdminApiClientInterface&MockObject $client;
-    private ShopwareReferenceDataResolverInterface&MockObject $resolver;
+    private ShopwareAdminApiClientInterface&Stub $client;
+    private ShopwareReferenceDataResolverInterface&Stub $resolver;
     private ShopwareProductImportService $service;
 
     protected function setUp(): void
     {
-        $this->client = $this->createMock(ShopwareAdminApiClientInterface::class);
-        $this->resolver = $this->createMock(ShopwareReferenceDataResolverInterface::class);
+        $this->client = $this->createStub(ShopwareAdminApiClientInterface::class);
+        $this->resolver = $this->createStub(ShopwareReferenceDataResolverInterface::class);
 
         $this->resolver->method('getCurrencyId')->willReturn(self::CURRENCY_ID);
         $this->resolver->method('getTaxId')->willReturn(self::TAX_ID);
