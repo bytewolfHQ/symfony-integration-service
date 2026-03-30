@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Integration\Infrastructure\Shopware\Product\Import;
 
-use App\Integration\Infrastructure\Shopware\Product\ShopwareProductImporterInterface;
+use App\Integration\Infrastructure\Shopware\Product\ShopwareProductImportInterface;
 
 final class ProductCsvImportRunner
 {
     public function __construct(
-        private readonly ShopwareProductImporterInterface $importService,
+        private readonly ShopwareProductImportInterface $importService,
         private readonly ProductDraftValidatorInterface $validator,
     ) {}
 
@@ -20,6 +20,7 @@ final class ProductCsvImportRunner
      *   total:int,
      *   created:int,
      *   updated:int,
+     *   skipped:int,
      *   failed:int,
      *   results:list<array{productNumber:string, name:string, action:string}>
      * }
@@ -28,6 +29,7 @@ final class ProductCsvImportRunner
     {
         $created = 0;
         $updated = 0;
+        $skipped = 0;
         $failed = 0;
         $results = [];
 
@@ -42,6 +44,7 @@ final class ProductCsvImportRunner
                     match ($action) {
                         'create' => $created++,
                         'update' => $updated++,
+                        'skipped' => $skipped++,
                         default => null,
                     };
 
@@ -76,6 +79,7 @@ final class ProductCsvImportRunner
             'total' => count($drafts),
             'created' => $created,
             'updated' => $updated,
+            'skipped' => $skipped,
             'failed' => $failed,
             'results' => $results,
         ];

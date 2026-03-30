@@ -102,11 +102,12 @@ final class ShopwareProductsImportBatchCommand extends Command
                 }
 
                 $output->writeln(sprintf(
-                    'Summary: total=%d, created=%d, updated=%d, failed=%d',
-                    $summary['total'],
+                    'Summary: created=%d, updated=%d, skipped=%d, failed=%d%s',
                     $summary['created'],
                     $summary['updated'],
-                    $summary['failed']
+                    $summary['skipped'],
+                    $summary['failed'],
+                    $dryRun ? ' (dry-run)' : ''
                 ));
 
                 $targetDir = ($summary['failed'] > 0) ? $failedDir : $processedDir;

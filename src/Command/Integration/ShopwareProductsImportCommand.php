@@ -44,6 +44,7 @@ final class ShopwareProductsImportCommand extends Command
 
         $created = 0;
         $updated = 0;
+        $skipped = 0;
         $failed = 0;
 
         foreach ($drafts as $draft) {
@@ -53,6 +54,7 @@ final class ShopwareProductsImportCommand extends Command
                 match ($action) {
                     'create' => $created++,
                     'update' => $updated++,
+                    'skipped' => $skipped++,
                     default => null,
                 };
 

@@ -78,9 +78,10 @@ final class ShopwareProductsImportCsvCommand extends Command
         }
 
         $output->writeln(sprintf(
-            'Summary: created=%d, updated=%d, failed=%d%s',
+            'Summary: created=%d, updated=%d, skipped=%d, failed=%d%s',
             $summary['created'],
             $summary['updated'],
+            $summary['skipped'],
             $summary['failed'],
             $dryRun ? ' (dry-run)' : ''
         ));
