@@ -9,14 +9,14 @@ use App\Integration\Infrastructure\Shopware\Product\Import\ProductDraftValidator
 use App\Integration\Infrastructure\Shopware\Product\Import\ProductDraftValidatorInterface;
 use App\Integration\Infrastructure\Shopware\Product\Import\ValidationError;
 use App\Integration\Infrastructure\Shopware\Product\ProductDraft;
-use App\Integration\Infrastructure\Shopware\Product\ShopwareProductImporterInterface;
+use App\Integration\Infrastructure\Shopware\Product\ShopwareProductImportInterface;
 use PHPUnit\Framework\TestCase;
 
 final class ProductCsvImportRunnerTest extends TestCase
 {
     public function test_import_drafts_counts_create_and_update(): void
     {
-        $service = $this->createMock(ShopwareProductImporterInterface::class);
+        $service = $this->createMock(ShopwareProductImportInterface::class);
 
         $service
             ->expects(self::exactly(2))
@@ -47,7 +47,7 @@ final class ProductCsvImportRunnerTest extends TestCase
 
     public function test_import_drafts_counts_failures(): void
     {
-        $service = $this->createMock(ShopwareProductImporterInterface::class);
+        $service = $this->createMock(ShopwareProductImportInterface::class);
 
         $service
             ->expects(self::exactly(2))
@@ -83,7 +83,7 @@ final class ProductCsvImportRunnerTest extends TestCase
 
     public function test_validation_errors_are_counted_as_failed(): void
     {
-        $service = $this->createStub(ShopwareProductImporterInterface::class);
+        $service = $this->createStub(ShopwareProductImportInterface::class);
         $validator = $this->createStub(ProductDraftValidatorInterface::class);
 
         // First draft fails validation, second passes
@@ -113,7 +113,7 @@ final class ProductCsvImportRunnerTest extends TestCase
 
     public function test_validation_error_appears_in_results(): void
     {
-        $service = $this->createStub(ShopwareProductImporterInterface::class);
+        $service = $this->createStub(ShopwareProductImportInterface::class);
         $validator = $this->createStub(ProductDraftValidatorInterface::class);
 
         $validator
@@ -126,5 +126,29 @@ final class ProductCsvImportRunnerTest extends TestCase
         $summary = $runner->importDrafts($drafts);
 
         self::assertStringStartsWith('validation:', $summary['results'][0]['action']);
+    }
+
+    public function test_skipped_products_are_counted_separately(): void
+    {
+        $service = $this->createStub(ShopwareProductImportInterface::class);
+        $validator = $this->createStub(ProductDraftValidatorInterface::class);
+
+        $service->method('upsert')->willReturnOnConsecutiveCalls('update', 'skipped', 'skipped');
+        $validator->method('validate')->willReturn([]);
+
+        $runner = new ProductCsvImportRunner($service, $validator);
+
+        $drafts = [
+            new ProductDraft('IMP-101', 'Product 101'),
+            new ProductDraft('IMP-102', 'Product 102'),
+            new ProductDraft('IMP-103', 'Product 103'),
+        ];
+
+        $summary = $runner->importDrafts($drafts);
+
+        self::assertSame(3, $summary['total']);
+        self::assertSame(1, $summary['updated']);
+        self::assertSame(2, $summary['skipped']);
+        self::assertSame(0, $summary['failed']);
     }
 }

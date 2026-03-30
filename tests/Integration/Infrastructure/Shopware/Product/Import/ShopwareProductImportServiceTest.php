@@ -155,4 +155,111 @@ final class ShopwareProductImportServiceTest extends TestCase
 
         self::assertArrayNotHasKey('price', $capturedPayload);
     }
+
+    public function test_upsert_returns_skipped_when_nothing_changed(): void
+    {
+        $this->client
+            ->method('requestOrFail')
+            ->willReturnCallback(function (string $method, string $path): array {
+                if ($method === 'POST' && str_contains($path, 'search/product')) {
+                    return ['body' => ['data' => [['id' => 'existing-uuid']]]];
+                }
+                if ($method === 'GET' && str_contains($path, 'existing-uuid')) {
+                    return ['body' => ['data' => ['attributes' => [
+                        'name'   => 'Product 101',
+                        'stock'  => 10,
+                        'active' => true,
+                        'price'  => [['gross' => 19.99]],
+                    ]]]];
+                }
+                return ['body' => []];
+            });
+
+        // Draft matches current Shopware data exactly → should be skipped
+        $draft = new ProductDraft('IMP-101', 'Product 101', 10, 19.99, null, 19.0, 'EUR', true);
+        $result = $this->service->upsert($draft);
+
+        self::assertSame('skipped', $result);
+    }
+
+    public function test_upsert_returns_update_when_stock_changed(): void
+    {
+        $this->client
+            ->method('requestOrFail')
+            ->willReturnCallback(function (string $method, string $path): array {
+                if ($method === 'POST' && str_contains($path, 'search/product')) {
+                    return ['body' => ['data' => [['id' => 'existing-uuid']]]];
+                }
+                if ($method === 'GET' && str_contains($path, 'existing-uuid')) {
+                    return ['body' => ['data' => ['attributes' => [
+                        'name'   => 'Product 101',
+                        'stock'  => 10,  // current stock in Shopware
+                        'active' => true,
+                        'price'  => [['gross' => 19.99]],
+                    ]]]];
+                }
+                return ['body' => []];
+            });
+
+        // stock changed from 10 to 20 → should update
+        $draft = new ProductDraft('IMP-101', 'Product 101', 20, 19.99, null, 19.0, 'EUR', true);
+        $result = $this->service->upsert($draft);
+
+        self::assertSame('update', $result);
+    }
+
+    public function test_upsert_returns_update_when_active_changed(): void
+    {
+        $this->client
+            ->method('requestOrFail')
+            ->willReturnCallback(function (string $method, string $path): array {
+                if ($method === 'POST' && str_contains($path, 'search/product')) {
+                    return ['body' => ['data' => [['id' => 'existing-uuid']]]];
+                }
+                if ($method === 'GET' && str_contains($path, 'existing-uuid')) {
+                    return ['body' => ['data' => ['attributes' => [
+                        'name'   => 'Product 101',
+                        'stock'  => 10,
+                        'active' => true,  // currently active
+                        'price'  => [['gross' => 19.99]],
+                    ]]]];
+                }
+                return ['body' => []];
+            });
+
+        // active changed to false → should update
+        $draft = new ProductDraft('IMP-101', 'Product 101', 10, 19.99, null, 19.0, 'EUR', false);
+        $result = $this->service->upsert($draft);
+
+        self::assertSame('update', $result);
+    }
+
+    public function test_dry_run_returns_skipped_without_api_call(): void
+    {
+        $client = $this->createMock(ShopwareAdminApiClientInterface::class);
+
+        // Only two calls allowed: search + fetch current data — no PATCH
+        $client
+            ->expects(self::exactly(2))
+            ->method('requestOrFail')
+            ->willReturnCallback(function (string $method, string $path): array {
+                if ($method === 'POST' && str_contains($path, 'search/product')) {
+                    return ['body' => ['data' => [['id' => 'existing-uuid']]]];
+                }
+                // GET current data
+                return ['body' => ['data' => ['attributes' => [
+                    'name'   => 'Product 101',
+                    'stock'  => 10,
+                    'active' => true,
+                    'price'  => [['gross' => 19.99]],
+                ]]]];
+            });
+
+        $service = new ShopwareProductImportService($client, $this->resolver);
+
+        $draft = new ProductDraft('IMP-101', 'Product 101', 10, 19.99, null, 19.0, 'EUR', true);
+        $result = $service->upsert($draft, dryRun: true);
+
+        self::assertSame('skipped', $result);
+    }
 }
