@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Command\Integration;
 
-use App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvImportRunner;
-use App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvReader;
+use App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvImportRunnerInterface;
+use App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvReaderInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -19,8 +19,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 final class ShopwareProductsImportBatchCommand extends Command
 {
     public function __construct(
-        private readonly ProductCsvReader $csvReader,
-        private readonly ProductCsvImportRunner $runner,
+        private readonly ProductCsvReaderInterface $csvReader,
+        private readonly ProductCsvImportRunnerInterface $runner,
     ) {
         parent::__construct();
     }
@@ -87,15 +87,9 @@ final class ShopwareProductsImportBatchCommand extends Command
             $output->writeln('');
             $output->writeln('File: '.$basename);
 
-            if ($dryRun) {
-                $output->writeln('would read: '.$file);
-                $output->writeln('would move to: processed/failed depending on result');
-                continue;
-            }
-
             try {
                 $drafts = $this->csvReader->read($file, $delimiter, $limit);
-                $summary = $this->runner->importDrafts($drafts, false);
+                $summary = $this->runner->importDrafts($drafts, $dryRun);
 
                 foreach ($summary['results'] as $r) {
                     $output->writeln(sprintf('%s: %s | %s', $r['action'], $r['productNumber'], $r['name']));
@@ -109,6 +103,10 @@ final class ShopwareProductsImportBatchCommand extends Command
                     $summary['failed'],
                     $dryRun ? ' (dry-run)' : ''
                 ));
+
+                if ($dryRun) {
+                    continue;
+                }
 
                 $targetDir = ($summary['failed'] > 0) ? $failedDir : $processedDir;
                 if ($summary['failed'] > 0) {
@@ -128,11 +126,13 @@ final class ShopwareProductsImportBatchCommand extends Command
 
                 $output->writeln('<error>File failed: '.$e->getMessage().'</error>');
 
-                $targetPath = $this->uniqueTargetPath($failedDir, $basename);
-                if (!@rename($file, $targetPath)) {
-                    $output->writeln('<error>Could not move failed file to: '.$targetPath.'</error>');
-                } else {
-                    $output->writeln('moved to: '.$targetPath);
+                if (!$dryRun) {
+                    $targetPath = $this->uniqueTargetPath($failedDir, $basename);
+                    if (!@rename($file, $targetPath)) {
+                        $output->writeln('<error>Could not move failed file to: '.$targetPath.'</error>');
+                    } else {
+                        $output->writeln('moved to: '.$targetPath);
+                    }
                 }
             }
         }

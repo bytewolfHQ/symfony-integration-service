@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Command\Integration;
 
-use App\Integration\Infrastructure\Http\Shopware\ShopwareAdminApiClient;
+use App\Integration\Infrastructure\Http\Shopware\ShopwareAdminApiClientInterface;
+use App\Integration\Infrastructure\Http\Shopware\SnippetFormatter;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -17,7 +18,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 final class ShopwarePingCommand extends Command
 {
     public function __construct(
-        private readonly ShopwareAdminApiClient $client,
+        private readonly ShopwareAdminApiClientInterface $client,
     ) {
         parent::__construct();
     }
@@ -34,7 +35,7 @@ final class ShopwarePingCommand extends Command
         return Command::SUCCESS;
     }
 
-    private function printResult(OutputInterface $output, string $label, int $status, string $body): void
+    private function printResult(OutputInterface $output, string $label, int $status, mixed $body): void
     {
         if ($status >= 200 && $status < 300) {
             $output->writeln(sprintf('<info>%s: %d (OK)</info>', $label, $status));
@@ -46,30 +47,10 @@ final class ShopwarePingCommand extends Command
             return;
         }
 
-        $snippet = $this->snippet($body);
+        $snippet = SnippetFormatter::format($body, 250);
         $output->writeln(sprintf('<error>%s: %d</error>', $label, $status));
         if ($snippet !== '') {
             $output->writeln('  ' . $snippet);
         }
-    }
-
-    private function snippet(mixed $text, int $max = 250): string
-    {
-        if (is_array($text)) {
-            $text = json_encode($text, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '';
-        } elseif (!is_string($text)) {
-            $text = (string) $text;
-        }
-
-        $t = trim($text);
-        if ($t === '') {
-            return '';
-        }
-
-        if (mb_strlen($t) <= $max) {
-            return $t;
-        }
-
-        return mb_substr($t, 0, $max) . '…';
     }
 }

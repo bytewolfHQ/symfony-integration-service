@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Command\Integration;
 
-use App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvReader;
-use App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvImportRunner;
+use App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvImportRunnerInterface;
+use App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvReaderInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -19,8 +19,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 final class ShopwareProductsImportCsvCommand extends Command
 {
     public function __construct(
-        private readonly ProductCsvReader $csvReader,
-        private readonly ProductCsvImportRunner $runner,
+        private readonly ProductCsvReaderInterface $csvReader,
+        private readonly ProductCsvImportRunnerInterface $runner,
     ) {
         parent::__construct();
     }

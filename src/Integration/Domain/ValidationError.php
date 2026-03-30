@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Integration\Infrastructure\Shopware\Product\Import;
+namespace App\Integration\Domain;
 
 final readonly class ValidationError
 {

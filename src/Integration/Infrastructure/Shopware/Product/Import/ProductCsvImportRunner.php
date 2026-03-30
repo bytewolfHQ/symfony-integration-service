@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Integration\Infrastructure\Shopware\Product\Import;
 
+use App\Integration\Domain\ProductDraft;
 use App\Integration\Infrastructure\Shopware\Product\ShopwareProductImportInterface;
 
-final class ProductCsvImportRunner
+final class ProductCsvImportRunner implements ProductCsvImportRunnerInterface
 {
     public function __construct(
         private readonly ShopwareProductImportInterface $importService,
@@ -14,7 +15,7 @@ final class ProductCsvImportRunner
     ) {}
 
     /**
-     * @param list<\App\Integration\Infrastructure\Shopware\Product\ProductDraft> $drafts
+     * @param list<ProductDraft> $drafts
      * @param bool $dryRun
      * @return array{
      *   total:int,
@@ -33,7 +34,10 @@ final class ProductCsvImportRunner
         $failed = 0;
         $results = [];
 
-        $rowNumber = 2; // row 1 is the header, already consumed by the reader
+        // Note: row numbers reported in ValidationError start at 2 (row 1 = header).
+        // Rows skipped by ProductCsvReader (empty productNumber/name) are not counted here,
+        // so reported row numbers may not match the actual CSV line numbers for such files.
+        $rowNumber = 2;
         foreach ($drafts as $draft) {
             $errors = $this->validator->validate($draft, $rowNumber);
 

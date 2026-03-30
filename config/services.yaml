@@ -37,5 +37,10 @@ services:
             $clientId: '%env(resolve:SHOPWARE_CLIENT_ID)%'
             $clientSecret: '%env(resolve:SHOPWARE_CLIENT_SECRET)%'
 
+    App\Integration\Infrastructure\Http\Shopware\ShopwareAdminApiClientInterface: '@App\Integration\Infrastructure\Http\Shopware\ShopwareAdminApiClient'
     App\Integration\Infrastructure\Http\Shopware\ShopwareTokenProviderInterface: '@App\Integration\Infrastructure\Http\Shopware\ShopwareTokenProvider'
     App\Integration\Infrastructure\Shopware\Product\ShopwareProductImportInterface: '@App\Integration\Infrastructure\Shopware\Product\ShopwareProductImportService'
+    App\Integration\Infrastructure\Shopware\Product\Import\ProductDraftValidatorInterface: '@App\Integration\Infrastructure\Shopware\Product\Import\ProductDraftValidator'
+    App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvReaderInterface: '@App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvReader'
+    App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvImportRunnerInterface: '@App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvImportRunner'
+    App\Integration\Infrastructure\Shopware\ReferenceData\ShopwareReferenceDataResolverInterface: '@App\Integration\Infrastructure\Shopware\ReferenceData\ShopwareReferenceDataResolver'

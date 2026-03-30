@@ -7,8 +7,8 @@ namespace App\Tests\Integration\Infrastructure\Shopware\Product\Import;
 use App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvImportRunner;
 use App\Integration\Infrastructure\Shopware\Product\Import\ProductDraftValidator;
 use App\Integration\Infrastructure\Shopware\Product\Import\ProductDraftValidatorInterface;
-use App\Integration\Infrastructure\Shopware\Product\Import\ValidationError;
-use App\Integration\Infrastructure\Shopware\Product\ProductDraft;
+use App\Integration\Domain\ProductDraft;
+use App\Integration\Domain\ValidationError;
 use App\Integration\Infrastructure\Shopware\Product\ShopwareProductImportInterface;
 use PHPUnit\Framework\TestCase;
 

@@ -42,7 +42,7 @@ final class ShopwareTokenProviderTest extends TestCase
                         $payload = $decoded;
                     } else {
                         parse_str($body, $parsed);
-                        if (is_array($parsed) && $parsed !== []) {
+                        if ($parsed !== []) {
                             $payload = $parsed;
                         }
                     }

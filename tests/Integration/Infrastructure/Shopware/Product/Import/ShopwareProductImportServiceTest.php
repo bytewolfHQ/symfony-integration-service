@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Integration\Infrastructure\Shopware\Product\Import;
 
 use App\Integration\Infrastructure\Http\Shopware\ShopwareAdminApiClientInterface;
-use App\Integration\Infrastructure\Shopware\Product\ProductDraft;
+use App\Integration\Domain\ProductDraft;
 use App\Integration\Infrastructure\Shopware\Product\ShopwareProductImportService;
 use App\Integration\Infrastructure\Shopware\ReferenceData\ShopwareReferenceDataResolverInterface;
 use PHPUnit\Framework\TestCase;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Integration\Infrastructure\Shopware\ReferenceData;
 
-use App\Integration\Infrastructure\Http\Shopware\ShopwareAdminApiClient;
+use App\Integration\Infrastructure\Http\Shopware\ShopwareAdminApiClientInterface;
 
 final class ShopwareReferenceDataResolver implements ShopwareReferenceDataResolverInterface
 {
@@ -15,7 +15,7 @@ final class ShopwareReferenceDataResolver implements ShopwareReferenceDataResolv
     private array $taxIds = [];
 
     public function __construct(
-        private readonly ShopwareAdminApiClient $client,
+        private readonly ShopwareAdminApiClientInterface $client,
     ) {}
 
     public function getCurrencyId(?string $currency = null): string

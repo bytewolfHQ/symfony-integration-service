@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Command\Integration;
 
-use App\Integration\Infrastructure\Shopware\Product\ProductDraft;
-use App\Integration\Infrastructure\Shopware\Product\ShopwareProductImportService;
+use App\Integration\Domain\ProductDraft;
+use App\Integration\Infrastructure\Shopware\Product\ShopwareProductImportInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -19,7 +19,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 final class ShopwareProductsImportCommand extends Command
 {
     public function __construct(
-        private readonly ShopwareProductImportService $importService,
+        private readonly ShopwareProductImportInterface $importService,
     ) {
         parent::__construct();
     }

@@ -19,14 +19,10 @@ final class ShopwareAdminApiClient implements ShopwareAdminApiClientInterface
     }
 
     /**
-     * Request against Shopware API endpoint
-     * @param string $method
-     * @param string $path
-     * @param array $json
-     * @param array $query
-     * @param array $headers
-     * @param bool $authenticated
-     * @return array
+     * @param array<string, mixed> $json
+     * @param array<string, mixed> $query
+     * @param array<string, mixed> $headers
+     * @return array{status: int, raw: string, body: array<string, mixed>}
      * @throws \Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface
      * @throws \Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface
      * @throws \Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface
@@ -85,7 +81,7 @@ final class ShopwareAdminApiClient implements ShopwareAdminApiClientInterface
         $raw = $response->getContent(false);
 
         $decoded = null;
-        if (is_string($raw) && $raw !== '') {
+        if ($raw !== '') {
             $tmp = json_decode($raw, true);
             if (json_last_error() === JSON_ERROR_NONE && is_array($tmp)) {
                 $decoded = $tmp;
@@ -99,6 +95,13 @@ final class ShopwareAdminApiClient implements ShopwareAdminApiClientInterface
         ];
     }
 
+    /**
+     * @param array<string, mixed> $json
+     * @param array<string, mixed> $query
+     * @param array<string, mixed> $headers
+     * @return array{status: int, raw: string, body: array<string, mixed>}
+     * @throws ShopwareApiException
+     */
     public function requestOrFail(
         string $method,
         string $path,
@@ -109,19 +112,21 @@ final class ShopwareAdminApiClient implements ShopwareAdminApiClientInterface
     ): array
     {
         $res = $this->request($method, $path, $json, $query, $headers, $authenticated);
-        
+
         if ($res['status'] >= 200 && $res['status'] < 300) {
             return $res;
         }
-        
-        $snippet = $this->snippet($res['body']);
+
+        $snippet = SnippetFormatter::format($res['body']);
         throw new ShopwareApiException($res['status'], $method, $path, $snippet);
     }
 
     /**
      * Convenience wrapper for GET.
      *
-     * @return array{status:int, body:string}
+     * @param array<string, mixed> $query
+     * @param array<string, mixed> $headers
+     * @return array{status: int, raw: string, body: array<string, mixed>}
      */
     public function get(string $path, array $query = [], array $headers = [], bool $authenticated = false): array
     {
@@ -131,25 +136,5 @@ final class ShopwareAdminApiClient implements ShopwareAdminApiClientInterface
     private function buildUrl(string $path): string
     {
         return rtrim($this->baseUrl, '/') . '/' . ltrim($path, '/');
-    }
-
-    private function snippet(mixed $text, int $max = 300): string
-    {
-        if (is_array($text)) {
-            $text = json_encode($text, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '';
-        } elseif (!is_string($text)) {
-            $text = (string) $text;
-        }
-
-        $t = trim($text);
-        if ($t === '') {
-            return '';
-        }
-
-        if (mb_strlen($t) <= $max) {
-            return $t;
-        }
-
-        return mb_substr($t, 0, $max) . '…';
     }
 }

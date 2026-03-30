@@ -4,24 +4,23 @@ declare(strict_types=1);
 
 namespace App\Integration\Infrastructure\Shopware\Product;
 
+use App\Integration\Domain\ProductDraft;
 use App\Integration\Infrastructure\Http\Shopware\ShopwareAdminApiClientInterface;
 use App\Integration\Infrastructure\Shopware\ReferenceData\ShopwareReferenceDataResolverInterface;
 
 final class ShopwareProductImportService implements ShopwareProductImportInterface
 {
-    // TODO: make configurable via services.yaml parameter (app.shopware.default_tax_rate)
     private const DEFAULT_STOCK = 0;
-    private const DEFAULT_TAX_RATE = 19;
 
     public function __construct(
-        private ShopwareAdminApiClientInterface $client,
-        private ShopwareReferenceDataResolverInterface $resolver,
+        private readonly ShopwareAdminApiClientInterface $client,
+        private readonly ShopwareReferenceDataResolverInterface $resolver,
+        // Configurable via services.yaml: $defaultTaxRate: '%integration.adapters.shopware.default_tax_rate%'
+        private readonly int $defaultTaxRate = 19,
     ) {}
 
     /**
      * Returns the product id if found, otherwise null.
-     * @param string $productNumber
-     * @return string|null
      */
     public function findByProductNumber(string $productNumber): ?string
     {
@@ -54,10 +53,7 @@ final class ShopwareProductImportService implements ShopwareProductImportInterfa
     }
 
     /**
-     * Return "create" or "update"
-     * @param ProductDraft $draft
-     * @param bool $dryRun
-     * @return string
+     * Returns "create", "update", or "skipped".
      */
     public function upsert(ProductDraft $draft, bool $dryRun = false): string
     {
@@ -100,13 +96,15 @@ final class ShopwareProductImportService implements ShopwareProductImportInterfa
      * - gross is required for a price entry; if missing, no price is sent
      * - net is computed from gross + taxRate if not explicitly provided
      * - currency falls back to resolver default (EUR)
-     * - taxRate falls back to DEFAULT_TAX_RATE for net calculation and taxId resolution
+     * - taxRate falls back to $defaultTaxRate for net calculation and taxId resolution
      * - active defaults to true if not set
+     *
+     * @return array<string, mixed>
      */
     private function buildPayload(ProductDraft $draft): array
     {
         // Use taxRate from draft or fallback to default (e.g. 19%)
-        $effectiveTaxRate = $draft->taxRate ?? self::DEFAULT_TAX_RATE;
+        $effectiveTaxRate = $draft->taxRate ?? $this->defaultTaxRate;
 
         $payload = [
             'name'          => $draft->name,
@@ -139,7 +137,13 @@ final class ShopwareProductImportService implements ShopwareProductImportInterfa
         return $payload;
     }
 
-    // Fetches the fields we care about for comparison
+    /**
+     * Fetches the fields we care about for comparison.
+     * Values are cast to their expected PHP types to guard against APIs
+     * returning numbers as strings (e.g. stock as "0").
+     *
+     * @return array{name: string|null, stock: int|null, active: bool|null, gross: float|null}
+     */
     private function fetchCurrentData(string $productId): array
     {
         $res = $this->client->requestOrFail(
@@ -152,37 +156,41 @@ final class ShopwareProductImportService implements ShopwareProductImportInterfa
         $data = $res['body']['data']['attributes'] ?? [];
 
         return [
-            'name' => $data['name'] ?? null,
-            'stock' => $data['stock'] ?? null,
-            'active' => $data['active'] ?? null,
+            'name'   => is_string($data['name'] ?? null) ? $data['name'] : null,
+            'stock'  => isset($data['stock']) ? (int) $data['stock'] : null,
+            'active' => isset($data['active']) ? (bool) $data['active'] : null,
             // First price entry, default currency
-            'gross' => $data['price'][0]['gross'] ?? null,
+            'gross'  => isset($data['price'][0]['gross']) ? (float) $data['price'][0]['gross'] : null,
         ];
     }
 
-    // Compares draft against current Shopware data
+    /**
+     * Compares draft against current Shopware data.
+     *
+     * @param array{name: string|null, stock: int|null, active: bool|null, gross: float|null} $current
+     */
     private function hasChanges(ProductDraft $draft, array $current): bool
     {
         // Compare name
-        if ($draft->name !== ($current['name'] ?? null)) {
+        if ($draft->name !== $current['name']) {
             return true;
         }
 
         // Compare stock — draft fallback to DEFAULT_STOCK
         $draftStock = $draft->stock ?? self::DEFAULT_STOCK;
-        if ($draftStock !== ($current['stock'] ?? null)) {
+        if ($draftStock !== $current['stock']) {
             return true;
         }
 
         // Compare active — draft fallback to true
         $draftActive = $draft->active ?? true;
-        if ($draftActive !== ($current['active'] ?? null)) {
+        if ($draftActive !== $current['active']) {
             return true;
         }
 
         // Compare gross — only if draft has a price
         if ($draft->gross !== null) {
-            $currentGross = $current['gross'] ?? null;
+            $currentGross = $current['gross'];
             // Float comparison with small tolerance to avoid floating point issues
             if ($currentGross === null || abs($draft->gross - $currentGross) > 0.001) {
                 return true;

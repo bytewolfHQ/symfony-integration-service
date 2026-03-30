@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Integration\Infrastructure\Shopware\Product\Import;
 
 use App\Integration\Infrastructure\Shopware\Product\Import\ProductDraftValidator;
-use App\Integration\Infrastructure\Shopware\Product\ProductDraft;
+use App\Integration\Domain\ProductDraft;
 use PHPUnit\Framework\TestCase;
 
 final class ProductDraftValidatorTest extends TestCase
