@@ -7,7 +7,7 @@ namespace App\Integration\Infrastructure\Shopware\Product;
 use App\Integration\Infrastructure\Http\Shopware\ShopwareAdminApiClientInterface;
 use App\Integration\Infrastructure\Shopware\ReferenceData\ShopwareReferenceDataResolverInterface;
 
-final class ShopwareProductImportService implements ShopwareProductImporterInterface
+final class ShopwareProductImportService implements ShopwareProductImportInterface
 {
     // TODO: make configurable via services.yaml parameter (app.shopware.default_tax_rate)
     private const DEFAULT_STOCK = 0;
@@ -75,6 +75,12 @@ final class ShopwareProductImportService implements ShopwareProductImporterInter
             return 'create';
         }
 
+        // fetch current data and compare — skip if nothing changed
+        $current = $this->fetchCurrentData($existingId);
+        if (!$this->hasChanges($draft, $current)) {
+            return 'skipped';
+        }
+
         if (!$dryRun) {
             $this->client->requestOrFail(
                 method: 'PATCH',
@@ -131,5 +137,58 @@ final class ShopwareProductImportService implements ShopwareProductImporterInter
         }
 
         return $payload;
+    }
+
+    // Fetches the fields we care about for comparison
+    private function fetchCurrentData(string $productId): array
+    {
+        $res = $this->client->requestOrFail(
+            method: 'GET',
+            path: '/api/product/' . $productId,
+            json: [],
+            authenticated: true
+        );
+
+        $data = $res['body']['data']['attributes'] ?? [];
+
+        return [
+            'name' => $data['name'] ?? null,
+            'stock' => $data['stock'] ?? null,
+            'active' => $data['active'] ?? null,
+            // First price entry, default currency
+            'gross' => $data['price'][0]['gross'] ?? null,
+        ];
+    }
+
+    // Compares draft against current Shopware data
+    private function hasChanges(ProductDraft $draft, array $current): bool
+    {
+        // Compare name
+        if ($draft->name !== ($current['name'] ?? null)) {
+            return true;
+        }
+
+        // Compare stock — draft fallback to DEFAULT_STOCK
+        $draftStock = $draft->stock ?? self::DEFAULT_STOCK;
+        if ($draftStock !== ($current['stock'] ?? null)) {
+            return true;
+        }
+
+        // Compare active — draft fallback to true
+        $draftActive = $draft->active ?? true;
+        if ($draftActive !== ($current['active'] ?? null)) {
+            return true;
+        }
+
+        // Compare gross — only if draft has a price
+        if ($draft->gross !== null) {
+            $currentGross = $current['gross'] ?? null;
+            // Float comparison with small tolerance to avoid floating point issues
+            if ($currentGross === null || abs($draft->gross - $currentGross) > 0.001) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

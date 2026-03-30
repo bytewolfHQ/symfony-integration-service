@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Integration\Infrastructure\Shopware\Product;
 
-interface ShopwareProductImporterInterface
+interface ShopwareProductImportInterface
 {
     /**
      * Return "create" or "update"
