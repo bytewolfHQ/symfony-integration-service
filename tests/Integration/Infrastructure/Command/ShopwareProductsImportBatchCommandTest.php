@@ -5,20 +5,17 @@ declare(strict_types=1);
 namespace App\Tests\Integration\Infrastructure\Command;
 
 use App\Command\Integration\ShopwareProductsImportBatchCommand;
-use App\Integration\Domain\ProductDraft;
-use App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvImportRunnerInterface;
-use App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvReaderInterface;
+use App\Integration\Application\ImportProductsUseCaseInterface;
+use App\Integration\Domain\ImportResult;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Tester\CommandTester;
 
 final class ShopwareProductsImportBatchCommandTest extends TestCase
 {
-    private function makeTester(
-        ProductCsvReaderInterface $csvReader,
-        ProductCsvImportRunnerInterface $runner,
-    ): CommandTester {
+    private function makeTester(ImportProductsUseCaseInterface $useCase): CommandTester
+    {
         return new CommandTester(
-            new ShopwareProductsImportBatchCommand($csvReader, $runner)
+            new ShopwareProductsImportBatchCommand($useCase)
         );
     }
 
@@ -29,21 +26,18 @@ final class ShopwareProductsImportBatchCommandTest extends TestCase
         $csvFile = $tmpDir . '/products.csv';
         file_put_contents($csvFile, "productNumber,name\nP-001,Test Product\n");
 
-        $draft = new ProductDraft('P-001', 'Test Product');
+        $result = new ImportResult(
+            total: 1, created: 1, updated: 0, skipped: 0, failed: 0,
+            results: [['productNumber' => 'P-001', 'name' => 'Test Product', 'action' => 'create']],
+        );
 
-        $csvReader = $this->createStub(ProductCsvReaderInterface::class);
-        $csvReader->method('read')->willReturn([$draft]);
-
-        $runner = $this->createStub(ProductCsvImportRunnerInterface::class);
-        $runner->method('importDrafts')->willReturn([
-            'total' => 1, 'created' => 1, 'updated' => 0, 'skipped' => 0, 'failed' => 0,
-            'results' => [['productNumber' => 'P-001', 'name' => 'Test Product', 'action' => 'create']],
-        ]);
+        $useCase = $this->createStub(ImportProductsUseCaseInterface::class);
+        $useCase->method('execute')->willReturn($result);
 
         $processedDir = $tmpDir . '/processed';
         $failedDir = $tmpDir . '/failed';
 
-        $tester = $this->makeTester($csvReader, $runner);
+        $tester = $this->makeTester($useCase);
         $tester->execute([
             '--dir' => $tmpDir,
             '--pattern' => 'products.csv',
@@ -62,30 +56,33 @@ final class ShopwareProductsImportBatchCommandTest extends TestCase
         @rmdir($tmpDir);
     }
 
-    public function test_dry_run_calls_importDrafts_with_dryRun_true(): void
+    public function test_dry_run_does_not_move_files(): void
     {
         $tmpDir = sys_get_temp_dir() . '/batch_dryrun_' . uniqid();
         mkdir($tmpDir);
         $csvFile = $tmpDir . '/products.csv';
         file_put_contents($csvFile, "productNumber,name\nP-001,Test Product\n");
 
-        $draft = new ProductDraft('P-001', 'Test Product');
+        $result = new ImportResult(
+            total: 1, created: 0, updated: 0, skipped: 1, failed: 0,
+            results: [['productNumber' => 'P-001', 'name' => 'Test Product', 'action' => 'skipped']],
+            dryRun: true,
+        );
 
-        $csvReader = $this->createStub(ProductCsvReaderInterface::class);
-        $csvReader->method('read')->willReturn([$draft]);
-
-        // Use createMock here — we need to assert $dryRun=true is passed
-        $runner = $this->createMock(ProductCsvImportRunnerInterface::class);
-        $runner
+        // createMock — we verify dryRun=true is passed to execute()
+        $useCase = $this->createMock(ImportProductsUseCaseInterface::class);
+        $useCase
             ->expects(self::once())
-            ->method('importDrafts')
-            ->with([$draft], true)
-            ->willReturn([
-                'total' => 1, 'created' => 0, 'updated' => 0, 'skipped' => 1, 'failed' => 0,
-                'results' => [['productNumber' => 'P-001', 'name' => 'Test Product', 'action' => 'skipped']],
-            ]);
+            ->method('execute')
+            ->with(
+                self::stringEndsWith('products.csv'),
+                ',',
+                null,
+                true, // dryRun must be true
+            )
+            ->willReturn($result);
 
-        $tester = $this->makeTester($csvReader, $runner);
+        $tester = $this->makeTester($useCase);
         $tester->execute([
             '--dir' => $tmpDir,
             '--pattern' => 'products.csv',
@@ -108,10 +105,7 @@ final class ShopwareProductsImportBatchCommandTest extends TestCase
         $tmpDir = sys_get_temp_dir() . '/batch_empty_' . uniqid();
         mkdir($tmpDir);
 
-        $tester = $this->makeTester(
-            $this->createStub(ProductCsvReaderInterface::class),
-            $this->createStub(ProductCsvImportRunnerInterface::class),
-        );
+        $tester = $this->makeTester($this->createStub(ImportProductsUseCaseInterface::class));
         $tester->execute([
             '--dir' => $tmpDir,
             '--pattern' => 'products*.csv',
@@ -127,10 +121,7 @@ final class ShopwareProductsImportBatchCommandTest extends TestCase
 
     public function test_missing_directory_returns_failure(): void
     {
-        $tester = $this->makeTester(
-            $this->createStub(ProductCsvReaderInterface::class),
-            $this->createStub(ProductCsvImportRunnerInterface::class),
-        );
+        $tester = $this->makeTester($this->createStub(ImportProductsUseCaseInterface::class));
         $tester->execute([
             '--dir' => '/nonexistent/path/xyz',
             '--processed-dir' => '/tmp/processed',

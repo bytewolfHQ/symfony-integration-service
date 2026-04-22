@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Integration\Infrastructure\Shopware\Product\Import;
 
+use App\Integration\Application\Port\ProductImporterInterface;
+use App\Integration\Domain\ImportResult;
 use App\Integration\Domain\ProductDraft;
 use App\Integration\Infrastructure\Shopware\Product\ShopwareProductImportInterface;
 
-final class ProductCsvImportRunner implements ProductCsvImportRunnerInterface
+final class ProductCsvImportRunner implements ProductCsvImportRunnerInterface, ProductImporterInterface
 {
     public function __construct(
         private readonly ShopwareProductImportInterface $importService,
@@ -15,8 +17,27 @@ final class ProductCsvImportRunner implements ProductCsvImportRunnerInterface
     ) {}
 
     /**
+     * Implements ProductImporterInterface — returns typed ImportResult.
+     *
      * @param list<ProductDraft> $drafts
-     * @param bool $dryRun
+     */
+    public function import(array $drafts, bool $dryRun = false): ImportResult
+    {
+        $raw = $this->importDrafts($drafts, $dryRun);
+
+        return new ImportResult(
+            total:   $raw['total'],
+            created: $raw['created'],
+            updated: $raw['updated'],
+            skipped: $raw['skipped'],
+            failed:  $raw['failed'],
+            results: $raw['results'],
+            dryRun:  $dryRun,
+        );
+    }
+
+    /**
+     * @param list<ProductDraft> $drafts
      * @return array{
      *   total:int,
      *   created:int,
