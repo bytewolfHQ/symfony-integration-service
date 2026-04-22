@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command\Integration;
 
-use App\Integration\Application\ImportProductsUseCase;
+use App\Integration\Application\ImportProductsUseCaseInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -18,7 +18,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 final class ShopwareProductsImportCsvCommand extends Command
 {
     public function __construct(
-        private readonly ImportProductsUseCase $useCase,
+        private readonly ImportProductsUseCaseInterface $useCase,
     ) {
         parent::__construct();
     }

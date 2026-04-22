@@ -8,7 +8,7 @@ use App\Integration\Application\Port\ProductImporterInterface;
 use App\Integration\Application\Port\ProductReaderInterface;
 use App\Integration\Domain\ImportResult;
 
-final class ImportProductsUseCase
+final class ImportProductsUseCase implements ImportProductsUseCaseInterface
 {
     public function __construct(
         private readonly ProductReaderInterface $reader,

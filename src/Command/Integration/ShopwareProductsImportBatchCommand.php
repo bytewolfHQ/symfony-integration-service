@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command\Integration;
 
-use App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvImportRunnerInterface;
-use App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvReaderInterface;
+use App\Integration\Application\ImportProductsUseCaseInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -19,8 +18,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 final class ShopwareProductsImportBatchCommand extends Command
 {
     public function __construct(
-        private readonly ProductCsvReaderInterface $csvReader,
-        private readonly ProductCsvImportRunnerInterface $runner,
+        private readonly ImportProductsUseCaseInterface $useCase,
     ) {
         parent::__construct();
     }
@@ -56,7 +54,6 @@ final class ShopwareProductsImportBatchCommand extends Command
             return Command::FAILURE;
         }
 
-        // Ensure archive dirs exist
         if (!$this->ensureDir($processedDir) || !$this->ensureDir($failedDir)) {
             $output->writeln('<error>Could not create processed/failed directories.</error>');
             return Command::FAILURE;
@@ -88,28 +85,20 @@ final class ShopwareProductsImportBatchCommand extends Command
             $output->writeln('File: '.$basename);
 
             try {
-                $drafts = $this->csvReader->read($file, $delimiter, $limit);
-                $summary = $this->runner->importDrafts($drafts, $dryRun);
+                $result = $this->useCase->execute($file, $delimiter, $limit, $dryRun);
 
-                foreach ($summary['results'] as $r) {
+                foreach ($result->results as $r) {
                     $output->writeln(sprintf('%s: %s | %s', $r['action'], $r['productNumber'], $r['name']));
                 }
 
-                $output->writeln(sprintf(
-                    'Summary: created=%d, updated=%d, skipped=%d, failed=%d%s',
-                    $summary['created'],
-                    $summary['updated'],
-                    $summary['skipped'],
-                    $summary['failed'],
-                    $dryRun ? ' (dry-run)' : ''
-                ));
+                $output->writeln($result->summary());
 
                 if ($dryRun) {
                     continue;
                 }
 
-                $targetDir = ($summary['failed'] > 0) ? $failedDir : $processedDir;
-                if ($summary['failed'] > 0) {
+                $targetDir = $result->hasFailures() ? $failedDir : $processedDir;
+                if ($result->hasFailures()) {
                     $overallFailedFiles++;
                 }
 
@@ -123,7 +112,6 @@ final class ShopwareProductsImportBatchCommand extends Command
                 }
             } catch (\Throwable $e) {
                 $overallFailedFiles++;
-
                 $output->writeln('<error>File failed: '.$e->getMessage().'</error>');
 
                 if (!$dryRun) {
