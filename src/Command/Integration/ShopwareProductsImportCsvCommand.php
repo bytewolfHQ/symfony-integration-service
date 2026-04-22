@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command\Integration;
 
-use App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvImportRunnerInterface;
-use App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvReaderInterface;
+use App\Integration\Application\ImportProductsUseCase;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -19,8 +18,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 final class ShopwareProductsImportCsvCommand extends Command
 {
     public function __construct(
-        private readonly ProductCsvReaderInterface $csvReader,
-        private readonly ProductCsvImportRunnerInterface $runner,
+        private readonly ImportProductsUseCase $useCase,
     ) {
         parent::__construct();
     }
@@ -48,7 +46,7 @@ final class ShopwareProductsImportCsvCommand extends Command
         $limit = $limitOpt === null ? null : (int) $limitOpt;
 
         try {
-            $drafts = $this->csvReader->read($file, $delimiter, $limit);
+            $result = $this->useCase->execute($file, $delimiter, $limit, $dryRun);
         } catch (\Throwable $e) {
             $output->writeln('<error>' . $e->getMessage() . '</error>');
             return Command::FAILURE;
@@ -56,36 +54,21 @@ final class ShopwareProductsImportCsvCommand extends Command
 
         $output->writeln(sprintf(
             'Importing %d products from CSV%s',
-            count($drafts),
+            $result->total,
             $dryRun ? ' (dry-run)' : ''
         ));
 
-        if ($drafts === []) {
+        if ($result->total === 0) {
             $output->writeln('<comment>No valid rows found.</comment>');
             return Command::SUCCESS;
         }
 
-        $summary = $this->runner->importDrafts($drafts, $dryRun);
-
-        $output->writeln(sprintf(
-            'Importing %d products from CSV%s',
-            $summary['total'],
-            $dryRun ? ' (dry-run)' : ''
-        ));
-
-        foreach ($summary['results'] as $r) {
+        foreach ($result->results as $r) {
             $output->writeln(sprintf('%s: %s | %s', $r['action'], $r['productNumber'], $r['name']));
         }
 
-        $output->writeln(sprintf(
-            'Summary: created=%d, updated=%d, skipped=%d, failed=%d%s',
-            $summary['created'],
-            $summary['updated'],
-            $summary['skipped'],
-            $summary['failed'],
-            $dryRun ? ' (dry-run)' : ''
-        ));
+        $output->writeln($result->summary());
 
-        return $summary['failed'] > 0 ? Command::FAILURE : Command::SUCCESS;
+        return $result->hasFailures() ? Command::FAILURE : Command::SUCCESS;
     }
 }

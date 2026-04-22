@@ -4,9 +4,10 @@ declare(strict_types = 1);
 
 namespace App\Integration\Infrastructure\Shopware\Product\Import;
 
+use App\Integration\Application\Port\ProductReaderInterface;
 use App\Integration\Domain\ProductDraft;
 
-final class ProductCsvReader implements ProductCsvReaderInterface
+final class ProductCsvReader implements ProductCsvReaderInterface, ProductReaderInterface
 {
     /**
      * @param string $file
