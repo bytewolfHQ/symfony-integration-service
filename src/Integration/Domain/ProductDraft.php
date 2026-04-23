@@ -9,8 +9,8 @@ final readonly class ProductDraft
     public function __construct(
         public string $productNumber,
         public string $name,
-        public string $manufacturer,
-        public string $description,
+        public ?string $manufacturer = null,
+        public ?string $description = null,
         public ?int $stock = null,
         public ?float $gross = null,
         public ?float $net = null,

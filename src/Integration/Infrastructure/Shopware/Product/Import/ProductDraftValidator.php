@@ -33,7 +33,7 @@ final class ProductDraftValidator implements ProductDraftValidatorInterface
             $errors[] = new ValidationError($rowNumber, $draft->description, 'description','Too long (max 65535 chars)');
         }
 
-// manufacturer: optional, aber wenn gesetzt max. 255
+        // manufacturer: optional, aber wenn gesetzt max. 255
         if ($draft->manufacturer !== null && mb_strlen($draft->manufacturer) > 255) {
             $errors[] = new ValidationError($rowNumber, $draft->manufacturer, 'manufacturer', 'Too long (max 255 chars)');
         }
