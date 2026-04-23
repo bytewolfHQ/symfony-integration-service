@@ -109,11 +109,16 @@ final class ShopwareProductImportService implements ShopwareProductImportInterfa
         $payload = [
             'name'          => $draft->name,
             'productNumber' => $draft->productNumber,
+            'description'   => $draft->description,
             'stock'         => $draft->stock ?? self::DEFAULT_STOCK,
             'active'        => $draft->active ?? true,
             // Cast to int: taxRate is ?float in ProductDraft, getTaxId() expects int
             'taxId'         => $this->resolver->getTaxId((int) $effectiveTaxRate),
         ];
+
+        if ($draft->manufacturer !== null) {
+            $payload['manufacturerId'] = $this->resolver->getManufacturerId($draft->manufacturer);
+        }
 
         // Only build price entry if gross is present — Shopware rejects price
         // entries without a gross value
@@ -142,7 +147,7 @@ final class ShopwareProductImportService implements ShopwareProductImportInterfa
      * Values are cast to their expected PHP types to guard against APIs
      * returning numbers as strings (e.g. stock as "0").
      *
-     * @return array{name: string|null, stock: int|null, active: bool|null, gross: float|null}
+     * @return array{name: string|null, manufacturer: string|null, description: string|null, stock: int|null, active: bool|null, gross: float|null}
      */
     private function fetchCurrentData(string $productId): array
     {
@@ -157,6 +162,8 @@ final class ShopwareProductImportService implements ShopwareProductImportInterfa
 
         return [
             'name'   => is_string($data['name'] ?? null) ? $data['name'] : null,
+            'manufacturer' => is_string($data['manufacturer'] ?? null) ? $data['manufacturer'] : null,
+            'description' => is_string($data['description'] ?? null) ? $data['description'] : null,
             'stock'  => isset($data['stock']) ? (int) $data['stock'] : null,
             'active' => isset($data['active']) ? (bool) $data['active'] : null,
             // First price entry, default currency
@@ -167,12 +174,22 @@ final class ShopwareProductImportService implements ShopwareProductImportInterfa
     /**
      * Compares draft against current Shopware data.
      *
-     * @param array{name: string|null, stock: int|null, active: bool|null, gross: float|null} $current
+     * @param array{name: string|null, manufacturer: string|null, description: string|null, stock: int|null, active: bool|null, gross: float|null} $current
      */
     private function hasChanges(ProductDraft $draft, array $current): bool
     {
         // Compare name
         if ($draft->name !== $current['name']) {
+            return true;
+        }
+
+        // Compare manufacturer
+        if ($draft->manufacturer !== $current['manufacturer']) {
+            return true;
+        }
+
+        // Compare description
+        if ($draft->description !== $current['description']) {
             return true;
         }
 

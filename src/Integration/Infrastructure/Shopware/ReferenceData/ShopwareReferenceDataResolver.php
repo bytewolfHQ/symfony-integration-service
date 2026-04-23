@@ -14,6 +14,9 @@ final class ShopwareReferenceDataResolver implements ShopwareReferenceDataResolv
     // Cache keyed by tax rate, e.g. [19 => 'uuid...', 7 => 'uuid...']
     private array $taxIds = [];
 
+    // Cache keyed by name, e.g. ['ABC' => 'uuid...']
+    private array $manufacturerIds = [];
+
     public function __construct(
         private readonly ShopwareAdminApiClientInterface $client,
     ) {}
@@ -79,5 +82,34 @@ final class ShopwareReferenceDataResolver implements ShopwareReferenceDataResolv
         }
 
         return $this->taxIds[$taxRate] = $id;
+    }
+
+    public function getManufacturerId(string $name): string
+    {
+        if (isset($this->manufacturerIds[$name])) {
+            return $this->manufacturerIds[$name];
+        }
+
+        $res = $this->client->requestOrFail(
+            method: 'POST',
+            path: '/api/search/product-manufacturer',
+            json: [
+                'limit' => 1,
+                'filter' => [[
+                    'type'  => 'equals',
+                    'field' => 'name',
+                    'value' => $name,
+                ]],
+                'includes' => ['product_manufacturer' => ['id', 'name']],
+            ],
+            authenticated: true
+        );
+
+        $id = $res['body']['data'][0]['id'] ?? null;
+        if (!is_string($id) || $id === '') {
+            throw new \RuntimeException(sprintf('Could not resolve manufacturerId for "%s".', $name));
+        }
+
+        return $this->manufacturerIds[$name] = $id;
     }
 }

@@ -43,7 +43,7 @@ final class ShopwareProductImportServiceTest extends TestCase
                 return ['body' => []]; // create call
             });
 
-        $draft = new ProductDraft('IMP-NEW', 'New Product', 5, 19.99, null, 19.0, 'EUR', true);
+        $draft = new ProductDraft('IMP-NEW', 'New Product', null, null, 5, 19.99, null, 19.0, 'EUR', true);
         $result = $this->service->upsert($draft);
 
         self::assertSame('create', $result);
@@ -60,7 +60,7 @@ final class ShopwareProductImportServiceTest extends TestCase
                 return ['body' => []]; // patch call
             });
 
-        $draft = new ProductDraft('IMP-101', 'Updated Product', 10, 29.99, null, 19.0, 'EUR', true);
+        $draft = new ProductDraft('IMP-101', 'Updated Product', null, null, 10, 29.99, null, 19.0, 'EUR', true);
         $result = $this->service->upsert($draft);
 
         self::assertSame('update', $result);
@@ -102,7 +102,7 @@ final class ShopwareProductImportServiceTest extends TestCase
             );
 
         // gross=9.99, net=null → net should be calculated as 9.99 / 1.19 = 8.3950
-        $draft = new ProductDraft('IMP-CALC', 'Calc Product', null, 9.99, null, 19.0);
+        $draft = new ProductDraft('IMP-CALC', 'Calc Product', null, null, null, 9.99, null, 19.0);
         $this->service->upsert($draft);
 
         self::assertNotNull($capturedPayload);
@@ -127,7 +127,7 @@ final class ShopwareProductImportServiceTest extends TestCase
             );
 
         // active=null → should default to true in payload
-        $draft = new ProductDraft('IMP-ACTIVE', 'Active Product', null, 9.99, null, 19.0, null, null);
+        $draft = new ProductDraft('IMP-ACTIVE', 'Active Product', null, null, null, 9.99, null, 19.0, null, null);
         $this->service->upsert($draft);
 
         self::assertTrue($capturedPayload['active']);
@@ -176,7 +176,7 @@ final class ShopwareProductImportServiceTest extends TestCase
             });
 
         // Draft matches current Shopware data exactly → should be skipped
-        $draft = new ProductDraft('IMP-101', 'Product 101', 10, 19.99, null, 19.0, 'EUR', true);
+        $draft = new ProductDraft('IMP-101', 'Product 101', null, null, 10, 19.99, null, 19.0, 'EUR', true);
         $result = $this->service->upsert($draft);
 
         self::assertSame('skipped', $result);
@@ -202,7 +202,7 @@ final class ShopwareProductImportServiceTest extends TestCase
             });
 
         // stock changed from 10 to 20 → should update
-        $draft = new ProductDraft('IMP-101', 'Product 101', 20, 19.99, null, 19.0, 'EUR', true);
+        $draft = new ProductDraft('IMP-101', 'Product 101', null, null, 20, 19.99, null, 19.0, 'EUR', true);
         $result = $this->service->upsert($draft);
 
         self::assertSame('update', $result);
@@ -228,7 +228,7 @@ final class ShopwareProductImportServiceTest extends TestCase
             });
 
         // active changed to false → should update
-        $draft = new ProductDraft('IMP-101', 'Product 101', 10, 19.99, null, 19.0, 'EUR', false);
+        $draft = new ProductDraft('IMP-101', 'Product 101', null, null, 10, 19.99, null, 19.0, 'EUR', false);
         $result = $this->service->upsert($draft);
 
         self::assertSame('update', $result);
@@ -257,7 +257,7 @@ final class ShopwareProductImportServiceTest extends TestCase
 
         $service = new ShopwareProductImportService($client, $this->resolver);
 
-        $draft = new ProductDraft('IMP-101', 'Product 101', 10, 19.99, null, 19.0, 'EUR', true);
+        $draft = new ProductDraft('IMP-101', 'Product 101', null, null, 10, 19.99, null, 19.0, 'EUR', true);
         $result = $service->upsert($draft, dryRun: true);
 
         self::assertSame('skipped', $result);
