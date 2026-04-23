@@ -109,6 +109,8 @@ final class ShopwareProductImportService implements ShopwareProductImportInterfa
         $payload = [
             'name'          => $draft->name,
             'productNumber' => $draft->productNumber,
+            'manufacturerId'  => $this->resolver->getManufacturerId($draft->manufacturer),
+            'description'   => $draft->description,
             'stock'         => $draft->stock ?? self::DEFAULT_STOCK,
             'active'        => $draft->active ?? true,
             // Cast to int: taxRate is ?float in ProductDraft, getTaxId() expects int
@@ -157,6 +159,8 @@ final class ShopwareProductImportService implements ShopwareProductImportInterfa
 
         return [
             'name'   => is_string($data['name'] ?? null) ? $data['name'] : null,
+            'manufacturer' => is_string($data['manufacturer'] ?? null) ? $data['manufacturer'] : null,
+            'description' => is_string($data['description'] ?? null) ? $data['description'] : null,
             'stock'  => isset($data['stock']) ? (int) $data['stock'] : null,
             'active' => isset($data['active']) ? (bool) $data['active'] : null,
             // First price entry, default currency
@@ -173,6 +177,16 @@ final class ShopwareProductImportService implements ShopwareProductImportInterfa
     {
         // Compare name
         if ($draft->name !== $current['name']) {
+            return true;
+        }
+
+        // Compare manufacturer
+        if ($draft->manufacturer !== $current['manufacturer']) {
+            return true;
+        }
+
+        // Compare description
+        if ($draft->description !== $current['description']) {
             return true;
         }
 
