@@ -99,8 +99,8 @@ final class ProductCsvImportRunnerTest extends TestCase
         $runner = new ProductCsvImportRunner($service, $validator);
 
         $drafts = [
-            new ProductDraft('IMP-601', 'Product 601', null, null, null, null, 8.39),
-            new ProductDraft('IMP-602', 'Product 602', null, null, 5, 9.99),
+            new ProductDraft('IMP-601', 'Product 601', null, null, [], null, null, 8.39),
+            new ProductDraft('IMP-602', 'Product 602', null, null, [], 5, 9.99),
         ];
 
         $summary = $runner->importDrafts($drafts);
@@ -122,7 +122,7 @@ final class ProductCsvImportRunnerTest extends TestCase
 
         $runner = new ProductCsvImportRunner($service, $validator);
 
-        $drafts = [new ProductDraft('IMP-701', 'Product 701', null, null, null, null, 8.39)];
+        $drafts = [new ProductDraft('IMP-701', 'Product 701', null, null, [], null, null, 8.39)];
         $summary = $runner->importDrafts($drafts);
 
         self::assertStringStartsWith('validation:', $summary['results'][0]['action']);

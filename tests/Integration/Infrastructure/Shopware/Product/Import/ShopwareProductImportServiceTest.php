@@ -43,7 +43,7 @@ final class ShopwareProductImportServiceTest extends TestCase
                 return ['body' => []]; // create call
             });
 
-        $draft = new ProductDraft('IMP-NEW', 'New Product', null, null, 5, 19.99, null, 19.0, 'EUR', true);
+        $draft = new ProductDraft('IMP-NEW', 'New Product', null, null, [], 5, 19.99, null, 19.0, 'EUR', true);
         $result = $this->service->upsert($draft);
 
         self::assertSame('create', $result);
@@ -60,7 +60,7 @@ final class ShopwareProductImportServiceTest extends TestCase
                 return ['body' => []]; // patch call
             });
 
-        $draft = new ProductDraft('IMP-101', 'Updated Product', null, null, 10, 29.99, null, 19.0, 'EUR', true);
+        $draft = new ProductDraft('IMP-101', 'Updated Product', null, null, [], 10, 29.99, null, 19.0, 'EUR', true);
         $result = $this->service->upsert($draft);
 
         self::assertSame('update', $result);
@@ -102,7 +102,7 @@ final class ShopwareProductImportServiceTest extends TestCase
             );
 
         // gross=9.99, net=null → net should be calculated as 9.99 / 1.19 = 8.3950
-        $draft = new ProductDraft('IMP-CALC', 'Calc Product', null, null, null, 9.99, null, 19.0);
+        $draft = new ProductDraft('IMP-CALC', 'Calc Product', null, null, [], null, 9.99, null, 19.0);
         $this->service->upsert($draft);
 
         self::assertNotNull($capturedPayload);
@@ -127,7 +127,7 @@ final class ShopwareProductImportServiceTest extends TestCase
             );
 
         // active=null → should default to true in payload
-        $draft = new ProductDraft('IMP-ACTIVE', 'Active Product', null, null, null, 9.99, null, 19.0, null, null);
+        $draft = new ProductDraft('IMP-ACTIVE', 'Active Product', null, null, [], null, 9.99, null, 19.0, null, null);
         $this->service->upsert($draft);
 
         self::assertTrue($capturedPayload['active']);
@@ -176,7 +176,7 @@ final class ShopwareProductImportServiceTest extends TestCase
             });
 
         // Draft matches current Shopware data exactly → should be skipped
-        $draft = new ProductDraft('IMP-101', 'Product 101', null, null, 10, 19.99, null, 19.0, 'EUR', true);
+        $draft = new ProductDraft('IMP-101', 'Product 101', null, null, [], 10, 19.99, null, 19.0, 'EUR', true);
         $result = $this->service->upsert($draft);
 
         self::assertSame('skipped', $result);
@@ -202,7 +202,7 @@ final class ShopwareProductImportServiceTest extends TestCase
             });
 
         // stock changed from 10 to 20 → should update
-        $draft = new ProductDraft('IMP-101', 'Product 101', null, null, 20, 19.99, null, 19.0, 'EUR', true);
+        $draft = new ProductDraft('IMP-101', 'Product 101', null, null, [], 20, 19.99, null, 19.0, 'EUR', true);
         $result = $this->service->upsert($draft);
 
         self::assertSame('update', $result);
@@ -228,7 +228,7 @@ final class ShopwareProductImportServiceTest extends TestCase
             });
 
         // active changed to false → should update
-        $draft = new ProductDraft('IMP-101', 'Product 101', null, null, 10, 19.99, null, 19.0, 'EUR', false);
+        $draft = new ProductDraft('IMP-101', 'Product 101', null, null, [], 10, 19.99, null, 19.0, 'EUR', false);
         $result = $this->service->upsert($draft);
 
         self::assertSame('update', $result);
@@ -257,9 +257,136 @@ final class ShopwareProductImportServiceTest extends TestCase
 
         $service = new ShopwareProductImportService($client, $this->resolver);
 
-        $draft = new ProductDraft('IMP-101', 'Product 101', null, null, 10, 19.99, null, 19.0, 'EUR', true);
+        $draft = new ProductDraft('IMP-101', 'Product 101', null, null, [], 10, 19.99, null, 19.0, 'EUR', true);
         $result = $service->upsert($draft, dryRun: true);
 
         self::assertSame('skipped', $result);
+    }
+
+    public function test_empty_categories_not_in_payload(): void
+    {
+        $capturedPayload = null;
+
+        $this->client
+            ->method('requestOrFail')
+            ->willReturnCallback(
+                function (string $method, string $path, array $json) use (&$capturedPayload): array {
+                    if ($method === 'POST' && str_contains($path, 'search/product')) {
+                        return ['body' => ['data' => []]];
+                    }
+                    $capturedPayload = $json;
+                    return ['body' => []];
+                }
+            );
+
+        // categories = [] (default) → no 'categories' key in payload
+        $draft = new ProductDraft('IMP-NOCAT', 'No Cat Product');
+        $this->service->upsert($draft);
+
+        self::assertNotNull($capturedPayload);
+        self::assertArrayNotHasKey('categories', $capturedPayload);
+    }
+
+    public function test_categories_are_mapped_to_ids_in_payload(): void
+    {
+        $capturedPayload = null;
+
+        $this->client
+            ->method('requestOrFail')
+            ->willReturnCallback(
+                function (string $method, string $path, array $json) use (&$capturedPayload): array {
+                    if ($method === 'POST' && str_contains($path, 'search/product')) {
+                        return ['body' => ['data' => []]];
+                    }
+                    $capturedPayload = $json;
+                    return ['body' => []];
+                }
+            );
+
+        $this->resolver->method('getCategoryId')
+            ->willReturnCallback(static fn(string $name): string => match ($name) {
+                'Electronics' => 'cat-uuid-1',
+                'Featured'    => 'cat-uuid-2',
+                default       => 'cat-uuid-unknown',
+            });
+
+        $draft = new ProductDraft('IMP-CAT', 'Cat Product', null, null, ['Electronics', 'Featured']);
+        $this->service->upsert($draft);
+
+        self::assertNotNull($capturedPayload);
+        self::assertSame(
+            [['id' => 'cat-uuid-1'], ['id' => 'cat-uuid-2']],
+            $capturedPayload['categories']
+        );
+    }
+
+    public function test_visibilities_are_set_for_new_product(): void
+    {
+        $capturedPayload = null;
+
+        $this->client
+            ->method('requestOrFail')
+            ->willReturnCallback(
+                function (string $method, string $path, array $json) use (&$capturedPayload): array {
+                    if ($method === 'POST' && str_contains($path, 'search/product')) {
+                        return ['body' => ['data' => []]];
+                    }
+                    $capturedPayload = $json;
+                    return ['body' => []];
+                }
+            );
+
+        $service = new ShopwareProductImportService(
+            $this->client,
+            $this->resolver,
+            defaultSalesChannelId: 'sc-uuid-123'
+        );
+
+        $draft = new ProductDraft('IMP-VIS', 'Vis Product');
+        $service->upsert($draft);
+
+        self::assertNotNull($capturedPayload);
+        self::assertSame(
+            [['salesChannelId' => 'sc-uuid-123', 'visibility' => 30]],
+            $capturedPayload['visibilities']
+        );
+    }
+
+    public function test_visibilities_not_set_on_update(): void
+    {
+        $capturedPayload = null;
+
+        $this->client
+            ->method('requestOrFail')
+            ->willReturnCallback(
+                function (string $method, string $path, array $json) use (&$capturedPayload): array {
+                    if ($method === 'POST' && str_contains($path, 'search/product')) {
+                        return ['body' => ['data' => [['id' => 'existing-uuid']]]];
+                    }
+                    if ($method === 'GET') {
+                        return ['body' => ['data' => ['attributes' => [
+                            'name'   => 'Update Me',
+                            'stock'  => 5,   // differs from draft stock=10 → triggers update
+                            'active' => true,
+                        ]]]];
+                    }
+                    // PATCH call — capture payload
+                    $capturedPayload = $json;
+                    return ['body' => []];
+                }
+            );
+
+        $service = new ShopwareProductImportService(
+            $this->client,
+            $this->resolver,
+            defaultSalesChannelId: 'sc-uuid-123'
+        );
+
+        // stock differs (10 vs 5) → PATCH is triggered
+        $draft = new ProductDraft('IMP-UPD', 'Update Me', null, null, [], 10);
+        $service->upsert($draft);
+
+        self::assertNotNull($capturedPayload);
+        self::assertArrayNotHasKey('visibilities', $capturedPayload);
     }
 }

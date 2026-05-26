@@ -113,4 +113,58 @@ final class ProductCsvReaderTest extends TestCase
 
         @unlink($tmp);
     }
+
+    public function test_reads_single_category_from_csv(): void
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'csv_');
+        self::assertNotFalse($tmp);
+
+        file_put_contents($tmp, implode("\n", [
+            'productNumber,name,category',
+            'IMP-801,Product 801,Electronics',
+        ]));
+
+        $drafts = (new ProductCsvReader())->read($tmp);
+
+        self::assertCount(1, $drafts);
+        self::assertSame(['Electronics'], $drafts[0]->categories);
+
+        @unlink($tmp);
+    }
+
+    public function test_reads_multiple_categories_separated_by_semicolons(): void
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'csv_');
+        self::assertNotFalse($tmp);
+
+        file_put_contents($tmp, implode("\n", [
+            'productNumber,name,category',
+            'IMP-802,Product 802,Electronics;Featured',
+        ]));
+
+        $drafts = (new ProductCsvReader())->read($tmp);
+
+        self::assertCount(1, $drafts);
+        self::assertSame(['Electronics', 'Featured'], $drafts[0]->categories);
+
+        @unlink($tmp);
+    }
+
+    public function test_empty_category_column_produces_empty_array(): void
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'csv_');
+        self::assertNotFalse($tmp);
+
+        file_put_contents($tmp, implode("\n", [
+            'productNumber,name,category',
+            'IMP-803,Product 803,',
+        ]));
+
+        $drafts = (new ProductCsvReader())->read($tmp);
+
+        self::assertCount(1, $drafts);
+        self::assertSame([], $drafts[0]->categories);
+
+        @unlink($tmp);
+    }
 }

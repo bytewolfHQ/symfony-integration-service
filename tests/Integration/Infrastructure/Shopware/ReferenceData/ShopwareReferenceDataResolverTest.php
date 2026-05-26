@@ -127,4 +127,45 @@ final class ShopwareReferenceDataResolverTest extends TestCase
 
         (new ShopwareReferenceDataResolver($client))->getTaxId(99);
     }
+
+    public function test_getCategoryId_resolves_uuid_from_api(): void
+    {
+        $client = $this->createMock(ShopwareAdminApiClientInterface::class);
+        $client
+            ->expects(self::once())
+            ->method('requestOrFail')
+            ->willReturn(['status' => 200, 'raw' => '', 'body' => ['data' => [['id' => 'cat-uuid-123']]]]);
+
+        $id = (new ShopwareReferenceDataResolver($client))->getCategoryId('Electronics');
+
+        self::assertSame('cat-uuid-123', $id);
+    }
+
+    public function test_getCategoryId_caches_result(): void
+    {
+        // API is called only once despite two getCategoryId() invocations
+        $client = $this->createMock(ShopwareAdminApiClientInterface::class);
+        $client
+            ->expects(self::once())
+            ->method('requestOrFail')
+            ->willReturn(['status' => 200, 'raw' => '', 'body' => ['data' => [['id' => 'cat-uuid-123']]]]);
+
+        $resolver = new ShopwareReferenceDataResolver($client);
+        $resolver->getCategoryId('Electronics');
+        $id = $resolver->getCategoryId('Electronics');
+
+        self::assertSame('cat-uuid-123', $id);
+    }
+
+    public function test_getCategoryId_throws_when_not_found(): void
+    {
+        $client = $this->createStub(ShopwareAdminApiClientInterface::class);
+        $client->method('requestOrFail')
+            ->willReturn(['status' => 200, 'raw' => '', 'body' => ['data' => []]]);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/categoryId/');
+
+        (new ShopwareReferenceDataResolver($client))->getCategoryId('NonExistent');
+    }
 }
