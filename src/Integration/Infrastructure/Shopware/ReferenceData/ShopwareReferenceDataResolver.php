@@ -17,6 +17,8 @@ final class ShopwareReferenceDataResolver implements ShopwareReferenceDataResolv
     // Cache keyed by name, e.g. ['ABC' => 'uuid...']
     private array $manufacturerIds = [];
 
+    private array $categoryIds = [];
+
     public function __construct(
         private readonly ShopwareAdminApiClientInterface $client,
     ) {}
@@ -107,9 +109,44 @@ final class ShopwareReferenceDataResolver implements ShopwareReferenceDataResolv
 
         $id = $res['body']['data'][0]['id'] ?? null;
         if (!is_string($id) || $id === '') {
-            throw new \RuntimeException(sprintf('Could not resolve manufacturerId for "%s".', $name));
+            throw new \RuntimeException(sprintf(
+                'Could not resolve manufacturerId for "%s". Make sure the manufacturer exists in Shopware before importing.',
+                $name
+            ));
         }
 
         return $this->manufacturerIds[$name] = $id;
+    }
+
+    public function getCategoryId(string $name): string
+    {
+        if (isset($this->categoryIds[$name])) {
+            return $this->categoryIds[$name];
+        }
+
+        $res = $this->client->requestOrFail(
+            method: 'POST',
+            path: '/api/search/category',
+            json: [
+                'limit' => 1,
+                'filter' => [[
+                    'type'  => 'equals',
+                    'field' => 'name',
+                    'value' => $name,
+                ]],
+                'includes' => ['category' => ['id', 'name']],
+            ],
+            authenticated: true
+        );
+
+        $id = $res['body']['data'][0]['id'] ?? null;
+        if (!is_string($id) || $id === '') {
+            throw new \RuntimeException(sprintf(
+                'Could not resolve categoryId for "%s". Make sure the category exists in Shopware before importing.',
+                $name
+            ));
+        }
+
+        return $this->categoryIds[$name] = $id;
     }
 }

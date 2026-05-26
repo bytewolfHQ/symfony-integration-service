@@ -4,6 +4,8 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    integration.adapters.shopware.default_tax_rate: 19
+    integration.adapters.shopware.default_sales_channel_id: '%env(resolve:SHOPWARE_SALES_CHANNEL_ID)%'
 
 services:
     # default configuration for services in *this* file
@@ -36,6 +38,11 @@ services:
             $baseUrl: '%integration.adapters.shopware.base_url%'
             $clientId: '%env(resolve:SHOPWARE_CLIENT_ID)%'
             $clientSecret: '%env(resolve:SHOPWARE_CLIENT_SECRET)%'
+
+    App\Integration\Infrastructure\Shopware\Product\ShopwareProductImportService:
+        arguments:
+            $defaultTaxRate: '%integration.adapters.shopware.default_tax_rate%'
+            $defaultSalesChannelId: '%integration.adapters.shopware.default_sales_channel_id%'
 
     App\Integration\Application\ImportProductsUseCaseInterface: '@App\Integration\Application\ImportProductsUseCase'
     App\Integration\Application\Port\ProductReaderInterface: '@App\Integration\Infrastructure\Shopware\Product\Import\ProductCsvReader'

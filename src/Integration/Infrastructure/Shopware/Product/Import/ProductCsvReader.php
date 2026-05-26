@@ -49,6 +49,10 @@ final class ProductCsvReader implements ProductCsvReaderInterface, ProductReader
             $name = trim((string) ($assoc['name'] ?? ''));
             $manufacturer = trim((string) ($assoc['manufacturer'] ?? ''));
             $description = trim((string) ($assoc['description'] ?? ''));
+            $categoryRaw = $assoc['category'] ?? null;
+            $categories = $categoryRaw !== null && $categoryRaw !== ''
+                ? array_map('trim', explode(';', (string) $categoryRaw))
+                : [];
 
             if ($productNumber === '' || $name === '') {
                 continue;
@@ -66,6 +70,7 @@ final class ProductCsvReader implements ProductCsvReaderInterface, ProductReader
                 $name,
                 $manufacturer,
                 $description,
+                $categories,
                 $stock,
                 $gross,
                 $net,

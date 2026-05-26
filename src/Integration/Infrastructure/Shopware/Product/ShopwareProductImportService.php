@@ -15,8 +15,8 @@ final class ShopwareProductImportService implements ShopwareProductImportInterfa
     public function __construct(
         private readonly ShopwareAdminApiClientInterface $client,
         private readonly ShopwareReferenceDataResolverInterface $resolver,
-        // Configurable via services.yaml: $defaultTaxRate: '%integration.adapters.shopware.default_tax_rate%'
         private readonly int $defaultTaxRate = 19,
+        private readonly string $defaultSalesChannelId = '',
     ) {}
 
     /**
@@ -64,7 +64,7 @@ final class ShopwareProductImportService implements ShopwareProductImportInterfa
                 $this->client->requestOrFail(
                     method: 'POST',
                     path: '/api/product',
-                    json: $this->buildPayload($draft),
+                    json: $this->buildPayload($draft, isNew: true),
                     authenticated: true
                 );
             }
@@ -81,7 +81,7 @@ final class ShopwareProductImportService implements ShopwareProductImportInterfa
             $this->client->requestOrFail(
                 method: 'PATCH',
                 path: '/api/product/' . $existingId,
-                json: $this->buildPayload($draft),
+                json: $this->buildPayload($draft, isNew: false),
                 authenticated: true
             );
         }
@@ -101,7 +101,7 @@ final class ShopwareProductImportService implements ShopwareProductImportInterfa
      *
      * @return array<string, mixed>
      */
-    private function buildPayload(ProductDraft $draft): array
+    private function buildPayload(ProductDraft $draft, bool $isNew = false): array
     {
         // Use taxRate from draft or fallback to default (e.g. 19%)
         $effectiveTaxRate = $draft->taxRate ?? $this->defaultTaxRate;
@@ -120,6 +120,13 @@ final class ShopwareProductImportService implements ShopwareProductImportInterfa
             $payload['manufacturerId'] = $this->resolver->getManufacturerId($draft->manufacturer);
         }
 
+        if ($draft->categories !== []) {
+            $payload['categories'] = array_map(
+                fn(string $name) => ['id' => $this->resolver->getCategoryId($name)],
+                $draft->categories
+            );
+        }
+
         // Only build price entry if gross is present — Shopware rejects price
         // entries without a gross value
         if ($draft->gross !== null) {
@@ -136,6 +143,13 @@ final class ShopwareProductImportService implements ShopwareProductImportInterfa
                 // linked: false = gross and net are independent values;
                 // linked: true would let Shopware auto-calculate net from gross
                 'linked'     => false,
+            ]];
+        }
+
+        if ($isNew) {
+            $payload['visibilities'] = [[
+                'salesChannelId' => $this->defaultSalesChannelId,
+                'visibility' => 30,
             ]];
         }
 

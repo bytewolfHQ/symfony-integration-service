@@ -11,6 +11,7 @@ final readonly class ProductDraft
         public string $name,
         public ?string $manufacturer = null,
         public ?string $description = null,
+        public array $categories = [],
         public ?int $stock = null,
         public ?float $gross = null,
         public ?float $net = null,
